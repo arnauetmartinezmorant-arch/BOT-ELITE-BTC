@@ -54,7 +54,7 @@ function initChart() {
     layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' },
     grid: { vertLines: { color: 'rgba(148,163,184,0.06)' }, horzLines: { color: 'rgba(148,163,184,0.06)' } },
     rightPriceScale: { borderColor: 'rgba(148,163,184,0.15)' },
-    timeScale: { borderColor: 'rgba(148,163,184,0.15)', timeVisible: true, secondsVisible: false },
+    timeScale: { borderColor: 'rgba(148,163,184,0.15)', timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 8 },
     crosshair: { mode: LWC.CrosshairMode.Normal },
     autoSize: true,
   });
@@ -161,7 +161,13 @@ function renderChart() {
     if (lv.nearestResistance) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestResistance.price, color: 'rgba(234,57,67,0.35)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Res' }));
   }
 
-  if (!state._fitted) { chart.timeScale().fitContent(); state._fitted = true; }
+  if (!state._fitted) {
+    // Show the most recent ~140 candles (not all 400) for a clean, readable view.
+    const n = c.length;
+    if (n > 150) chart.timeScale().setVisibleLogicalRange({ from: n - 140, to: n + 6 });
+    else chart.timeScale().fitContent();
+    state._fitted = true;
+  }
   updateTradeOverlay();
   renderLegend();
 }
