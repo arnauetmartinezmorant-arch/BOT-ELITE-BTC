@@ -14,9 +14,11 @@ import { detectAllPatterns } from './patterns.js';
  *                 huge confluence (many indicators aligned + trend + higher
  *                 timeframes agreeing + a confirming pattern). */
 const RISK_PROFILES = {
-  normal:      { minScore: 5.0, minConviction: 62, atrMult: 1.4, label: 'Normal' },
-  conservador: { minScore: 6.5, minConviction: 75, atrMult: 1.6, label: 'Conservador' },
-  premium:     { minScore: 6.0, minConviction: 76, atrMult: 1.8, label: 'Premium',
+  normal:      { minScore: 4.5, minConviction: 58, atrMult: 1.4, label: 'Normal',
+                 minConfirmations: 4 },
+  conservador: { minScore: 6.0, minConviction: 70, atrMult: 1.6, label: 'Conservador',
+                 minConfirmations: 6 },
+  premium:     { minScore: 7.0, minConviction: 80, atrMult: 1.8, label: 'Premium',
                  minConfirmations: 8, requireMTF: true, minAdx: 25 },
 };
 
@@ -186,19 +188,15 @@ export function generateSignal(candles, ind, riskKey = 'normal', mtfBias = null)
   let blockReason = null;
   if (passes && profile.minConfirmations && confirmations < profile.minConfirmations) {
     passes = false;
-    blockReason = `Premium exige ${profile.minConfirmations}/9 indicadores alineados (hay ${confirmations}).`;
+    blockReason = `${profile.label} exige ${profile.minConfirmations}/9 indicadores alineados (hay ${confirmations}).`;
   }
   if (passes && profile.minAdx && (ind.last.adx == null || ind.last.adx < profile.minAdx)) {
     passes = false;
-    blockReason = `Premium exige tendencia fuerte (ADX ≥ ${profile.minAdx}).`;
+    blockReason = `${profile.label} exige tendencia fuerte (ADX ≥ ${profile.minAdx}).`;
   }
   if (passes && profile.requireMTF && mtfBias) {
     const agree = (rawDir === 'long' && mtfBias.score > 0) || (rawDir === 'short' && mtfBias.score < 0);
-    if (!agree) { passes = false; blockReason = 'Premium exige que los marcos superiores acompañen.'; }
-  }
-  if (passes && profile.requirePattern && !analysis.patterns.some((p) => p.dir === (rawDir === 'long' ? 'bull' : 'bear'))) {
-    passes = false;
-    blockReason = 'Premium exige un patrón (vela/figura) que confirme la entrada.';
+    if (!agree) { passes = false; blockReason = `${profile.label} exige que los marcos superiores acompañen.`; }
   }
 
   // Build reasons (top factors by weight)
@@ -239,11 +237,11 @@ export function generateSignal(candles, ind, riskKey = 'normal', mtfBias = null)
     analysis,
     plan,
     reasons,
-    message: profile.minConfirmations
+    message: profile.requireMTF
       ? `Trade Premium A+ · ${confirmations}/9 indicadores alineados.`
       : (rawDir === 'long'
-          ? 'Confluencia alcista de alta probabilidad detectada.'
-          : 'Confluencia bajista de alta probabilidad detectada.'),
+          ? `Confluencia alcista de alta probabilidad · ${confirmations}/9 indicadores.`
+          : `Confluencia bajista de alta probabilidad · ${confirmations}/9 indicadores.`),
     profile: profile.label,
   };
 }
