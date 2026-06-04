@@ -32,7 +32,6 @@ const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
 let chart, candleSeries, ema21Series, ema50Series, ema200Series;
 let priceLines = [];
 let refreshTimer = null;
-let liveTimer = null;
 let tickerTimer = null;
 
 /* ---------------------- helpers ---------------------- */
@@ -71,10 +70,9 @@ function initChart() {
 
   // overlay layer for the TradingView-style position box (green/red zones)
   buildTradeOverlay();
-  chart.timeScale().subscribeVisibleLogicalRangeChange(updateTradeOverlay);
-  chart.subscribeCrosshairMove(updateTradeOverlay);
-
-  window.addEventListener('resize', () => { if (chart) { updateTradeOverlay(); } });
+  // Reposition every animation frame so the boxes track price on pan AND zoom.
+  const overlayLoop = () => { updateTradeOverlay(); requestAnimationFrame(overlayLoop); };
+  requestAnimationFrame(overlayLoop);
 }
 
 /* ---------------------- trade position overlay ---------------------- */
@@ -395,7 +393,10 @@ async function analyze(opts = {}) {
 
     $('dataSource').textContent = source;
     $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
-    setStatus(source === 'Simulado' ? 'Datos simulados (en vivo)' : 'En vivo · 24/7 (pestaña abierta)', source === 'Simulado' ? 'error' : 'live');
+    setStatus(source === 'Simulado' ? 'Datos simulados (en vivo)' : 'En vivo · conectando stream…', source === 'Simulado' ? 'error' : 'live');
+
+    // (re)connect the realtime stream for this timeframe after loading history
+    if (!silent && state.autoRefresh) connectLiveStream();
   } catch (e) {
     console.error(e);
     setStatus('Error: ' + e.message, 'error');
@@ -406,17 +407,123 @@ async function analyze(opts = {}) {
   }
 }
 
-/* ---------------------- live tick (no button needed) ---------------------- */
-async function liveTick() {
-  if (state.loading || !state.candles.length) return;
-  // Offline/simulated mode: evolve the last candle locally so it feels alive
-  if (state.source === 'Simulado') { evolveSyntheticLast(); return; }
+/* ---------------------- LIVE ENGINE (WebSocket + REST fallback) ---------------------- */
+let ws = null;
+let wsAlive = false;
+let restPollTimer = null;
+let recomputeTimer = null;
+let wsReconnectTimer = null;
+
+const BINANCE_WS = { '1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w' };
+
+/** Open a realtime kline stream for the current timeframe (TradingView-style). */
+function connectLiveStream() {
+  closeLiveStream();
+  // Demo/offline data has no real stream → drive it locally.
+  if (state.source === 'Simulado') { startRestPolling(); return; }
+
+  const interval = BINANCE_WS[state.tf] || '4h';
   try {
-    const { candles, source } = await fetchCandles(state.tf, 3);
-    if (source === 'Simulado' || !candles || !candles.length) return; // never pollute real data
-    mergeCandles(candles);
-    recomputeLive();
-  } catch (e) { /* transient network hiccup, ignore */ }
+    ws = new WebSocket(`wss://stream.binance.com:9443/ws/btcusdt@kline_${interval}`);
+    ws.onopen = () => {
+      wsAlive = true;
+      stopRestPolling();
+      setStatus('En vivo · streaming en tiempo real', 'live');
+    };
+    ws.onmessage = (ev) => {
+      try { const d = JSON.parse(ev.data); if (d && d.k) applyLiveKline(d.k); } catch (e) {}
+    };
+    ws.onerror = () => { wsAlive = false; };
+    ws.onclose = () => {
+      wsAlive = false;
+      startRestPolling();                 // keep updating while WS is down
+      scheduleReconnect();
+    };
+    // If the socket doesn't open quickly (blocked region), fall back to polling.
+    setTimeout(() => { if (!wsAlive) startRestPolling(); }, 5000);
+  } catch (e) {
+    startRestPolling();
+  }
+}
+
+function scheduleReconnect() {
+  if (wsReconnectTimer) return;
+  wsReconnectTimer = setTimeout(() => {
+    wsReconnectTimer = null;
+    if (state.autoRefresh && !document.hidden) connectLiveStream();
+  }, 8000);
+}
+
+function closeLiveStream() {
+  if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+  wsAlive = false;
+}
+
+/** Apply one realtime kline from the WS stream to the chart instantly. */
+function applyLiveKline(k) {
+  const c = {
+    time: Math.floor(k.t / 1000),
+    open: +k.o, high: +k.h, low: +k.l, close: +k.c, volume: +k.v,
+  };
+  const arr = state.candles;
+  if (!arr.length) return;
+  const last = arr[arr.length - 1];
+  if (c.time === last.time) arr[arr.length - 1] = c;       // update forming candle
+  else if (c.time > last.time) arr.push(c);                // new candle started
+  else return;
+  if (arr.length > 800) state.candles = arr.slice(-800);
+
+  // instant, smooth candle update (like TradingView) without resetting zoom/pan
+  candleSeries.update({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close });
+  state.livePrice = c.close;
+  $('livePrice').textContent = fmtPrice(c.close);
+  $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+  refreshJournalLive();
+  state._needRecompute = true;             // indicators/signal refresh on throttle
+}
+
+/** REST fallback: poll the latest candles when WS is unavailable. */
+function startRestPolling() {
+  if (restPollTimer) return;
+  restPollTimer = setInterval(async () => {
+    if (document.hidden || state.loading) return;
+    if (state.source === 'Simulado') { evolveSyntheticLast(); return; }
+    try {
+      const { candles, source } = await fetchCandles(state.tf, 2);
+      if (source === 'Simulado' || !candles || !candles.length) return;
+      mergeCandles(candles);
+      const last = state.candles[state.candles.length - 1];
+      candleSeries.update({ time: last.time, open: last.open, high: last.high, low: last.low, close: last.close });
+      state.livePrice = last.close;
+      $('livePrice').textContent = fmtPrice(last.close);
+      $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+      refreshJournalLive();
+      state._needRecompute = true;
+      if (!wsAlive) setStatus('En vivo · sondeo (cada 3s)', 'live');
+    } catch (e) { /* transient */ }
+  }, 3000);
+}
+function stopRestPolling() {
+  if (restPollTimer) { clearInterval(restPollTimer); restPollTimer = null; }
+}
+
+/** Throttled recompute of indicators/signal/patterns from the live candles. */
+function startRecomputeLoop() {
+  if (recomputeTimer) return;
+  recomputeTimer = setInterval(() => {
+    if (document.hidden || !state._needRecompute || !state.candles.length) return;
+    state._needRecompute = false;
+    state.ind = computeIndicators(state.candles);
+    state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
+    renderChartLive();
+    renderSignal();
+    renderIndicators();
+    renderPatterns();
+    maybeAlert(state.signal);
+  }, 1200);
+}
+function stopRecomputeLoop() {
+  if (recomputeTimer) { clearInterval(recomputeTimer); recomputeTimer = null; }
 }
 
 function mergeCandles(incoming) {
@@ -426,31 +533,23 @@ function mergeCandles(incoming) {
     if (idx >= 0) arr[idx] = c;
     else if (c.time > arr[arr.length - 1].time) arr.push(c);
   }
-  if (arr.length > 600) state.candles = arr.slice(-600);
-}
-
-function recomputeLive() {
-  state.ind = computeIndicators(state.candles);
-  state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
-  renderChartLive();
-  renderSignal();
-  renderIndicators();
-  renderPatterns();
-  maybeAlert(state.signal);
-  updatePriceHeader(state.ind.last.price, null);
-  $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+  if (arr.length > 800) state.candles = arr.slice(-800);
 }
 
 /** Demo-mode price movement so the chart breathes when offline. */
 function evolveSyntheticLast() {
   const arr = state.candles;
+  if (!arr.length) return;
   const last = arr[arr.length - 1];
-  const step = last.close * 0.0008;
-  const nc = Math.max(1, last.close + (Math.random() - 0.5) * 2 * step);
-  last.close = Math.round(nc * 100) / 100;
+  const step = last.close * 0.0006;
+  last.close = Math.round(Math.max(1, last.close + (Math.random() - 0.5) * 2 * step) * 100) / 100;
   last.high = Math.max(last.high, last.close);
   last.low = Math.min(last.low, last.close);
-  recomputeLive();
+  candleSeries.update({ time: last.time, open: last.open, high: last.high, low: last.low, close: last.close });
+  state.livePrice = last.close;
+  $('livePrice').textContent = fmtPrice(last.close);
+  refreshJournalLive();
+  state._needRecompute = true;
 }
 
 function updatePriceHeader(price, changePct) {
@@ -624,13 +723,19 @@ function bindControls() {
 }
 
 function setupAutoRefresh() {
+  // clear everything first
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
-  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  stopRestPolling();
+  stopRecomputeLoop();
+
   if (state.autoRefresh) {
-    // fast live loop: updates candles, indicators, signal & boxes (no button)
-    liveTimer = setInterval(() => { if (!document.hidden) liveTick(); }, 7000);
-    // full re-analysis incl. multi-timeframe bias, runs quietly in the background
+    startRecomputeLoop();                 // throttled indicator/signal refresh from live data
+    connectLiveStream();                  // realtime candles (WS, REST fallback)
+    // full re-analysis incl. multi-timeframe bias, quietly in the background
     refreshTimer = setInterval(() => { if (!document.hidden) analyze({ silent: true }); }, 300000);
+  } else {
+    closeLiveStream();                    // pause the realtime stream
+    if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
   }
 }
 
@@ -648,7 +753,10 @@ function boot() {
 
   // catch up instantly when the user comes back to the tab
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && state.autoRefresh) { liveTick(); pollTicker(); }
+    if (!document.hidden && state.autoRefresh) {
+      if (!wsAlive) connectLiveStream();
+      pollTicker();
+    }
   });
 }
 

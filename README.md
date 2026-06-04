@@ -14,7 +14,9 @@ alertas sonoras + notificaciones y diario de trades.
 
 - **Gráfico de velas en vivo** (TradingView Lightweight Charts) con EMAs y niveles.
 - **Caja de posición estilo TradingView**: el trade completo se dibuja con una **zona verde (TP)** y una **zona roja (SL)** sobre el gráfico, con la línea de entrada.
-- **Actualización automática en vivo**: las velas, indicadores, señal y cajas se refrescan solos cada pocos segundos. No hace falta pulsar ningún botón.
+- **Actualización en tiempo real (estilo TradingView)**: la vela actual se mueve en
+  vivo mediante **streaming WebSocket** de Binance (con sondeo REST de respaldo si la
+  conexión se bloquea). Indicadores, señal y cajas se refrescan solos. Cero botones.
 - **7 temporalidades**: 1m, 5m, 15m, 1H, 4H, 1D, 1W.
 - **Motor de señales por confluencia**: combina tendencia, EMAs, RSI, MACD,
   Estocástico, ADX, volumen, patrones y sesgo multi-temporalidad.
