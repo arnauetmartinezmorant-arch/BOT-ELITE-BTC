@@ -32,6 +32,7 @@ const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
 let chart, candleSeries, ema21Series, ema50Series, ema200Series;
 let priceLines = [];
 let refreshTimer = null;
+let liveTimer = null;
 let tickerTimer = null;
 
 /* ---------------------- helpers ---------------------- */
@@ -68,7 +69,71 @@ function initChart() {
   ema50Series = chart.addLineSeries({ color: '#6366f1', lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
   ema200Series = chart.addLineSeries({ color: '#e2e8f0', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
-  window.addEventListener('resize', () => chart && chart.timeScale().fitContent());
+  // overlay layer for the TradingView-style position box (green/red zones)
+  buildTradeOverlay();
+  chart.timeScale().subscribeVisibleLogicalRangeChange(updateTradeOverlay);
+  chart.subscribeCrosshairMove(updateTradeOverlay);
+
+  window.addEventListener('resize', () => { if (chart) { updateTradeOverlay(); } });
+}
+
+/* ---------------------- trade position overlay ---------------------- */
+let overlayEl = null;
+function buildTradeOverlay() {
+  const host = $('chart');
+  overlayEl = document.createElement('div');
+  overlayEl.className = 'trade-overlay';
+  overlayEl.innerHTML = `
+    <div class="trade-box tp" data-el="tp"></div>
+    <div class="trade-box sl" data-el="sl"></div>
+    <div class="trade-line entry" data-el="entryLine"></div>
+    <div class="trade-tag tp" data-el="tpTag"></div>
+    <div class="trade-tag entry" data-el="entryTag"></div>
+    <div class="trade-tag sl" data-el="slTag"></div>`;
+  host.appendChild(overlayEl);
+}
+
+function priceScaleWidth() {
+  try { return chart.priceScale('right').width() || 64; } catch (e) { return 64; }
+}
+
+function updateTradeOverlay() {
+  if (!overlayEl) return;
+  const s = state.signal;
+  const show = state.showLevels && s && s.plan;
+  overlayEl.style.display = show ? 'block' : 'none';
+  if (!show) return;
+
+  const p = s.plan;
+  const W = $('chart').clientWidth;
+  const H = $('chart').clientHeight;
+  const psW = priceScaleWidth();
+  const paneW = Math.max(60, W - psW);
+  const boxW = Math.min(paneW * 0.46, 300);
+  const left = Math.max(0, paneW - boxW);
+
+  const clampY = (y) => Math.max(0, Math.min(H, y));
+  const yE = clampY(candleSeries.priceToCoordinate(p.entry));
+  const ySL = clampY(candleSeries.priceToCoordinate(p.stop));
+  const yTP = clampY(candleSeries.priceToCoordinate(p.tp2));
+
+  const set = (el, css) => { const n = overlayEl.querySelector(`[data-el="${el}"]`); Object.assign(n.style, css); return n; };
+  const isLong = s.direction === 'long';
+
+  // green profit zone: between entry and TP2
+  set('tp', { left: left + 'px', width: boxW + 'px', top: Math.min(yE, yTP) + 'px', height: Math.abs(yTP - yE) + 'px' });
+  // red loss zone: between entry and SL
+  set('sl', { left: left + 'px', width: boxW + 'px', top: Math.min(yE, ySL) + 'px', height: Math.abs(ySL - yE) + 'px' });
+  // entry line
+  set('entryLine', { left: left + 'px', width: boxW + 'px', top: yE + 'px' });
+
+  const pct = (target) => ((target - p.entry) / p.entry * 100);
+  const tpEl = set('tpTag', { left: (left + 5) + 'px', top: yTP + 'px' });
+  tpEl.textContent = `TP ${fmtPrice(p.tp2)}  ${pct(p.tp2) >= 0 ? '+' : ''}${pct(p.tp2).toFixed(2)}%`;
+  const eEl = set('entryTag', { left: (left + 5) + 'px', top: yE + 'px' });
+  eEl.textContent = `${isLong ? 'LONG' : 'SHORT'} · ${fmtPrice(p.entry)}`;
+  const slEl = set('slTag', { left: (left + 5) + 'px', top: ySL + 'px' });
+  slEl.textContent = `SL ${fmtPrice(p.stop)}  ${pct(p.stop).toFixed(2)}%`;
 }
 
 function renderChart() {
@@ -88,23 +153,31 @@ function renderChart() {
   priceLines.forEach((pl) => candleSeries.removePriceLine(pl));
   priceLines = [];
 
-  if (state.showLevels && state.signal && state.signal.plan) {
-    const p = state.signal.plan;
-    const add = (price, color, title) =>
-      priceLines.push(candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: LWC.LineStyle.Dashed, axisLabelVisible: true, title }));
-    add(p.entry, '#e2e8f0', 'Entrada');
-    add(p.stop, '#ea3943', 'SL');
-    add(p.tp1, '#16c784', 'TP1');
-    add(p.tp2, '#16c784', 'TP2');
-  }
-  // draw key S/R levels
+  // S/R levels stay as subtle dotted lines (the trade itself is the green/red box)
   if (state.showLevels && state.signal && state.signal.analysis) {
     const lv = state.signal.analysis.levels;
-    if (lv.nearestSupport) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestSupport.price, color: 'rgba(22,199,132,0.4)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Sop' }));
-    if (lv.nearestResistance) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestResistance.price, color: 'rgba(234,57,67,0.4)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Res' }));
+    if (lv.nearestSupport) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestSupport.price, color: 'rgba(22,199,132,0.35)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Sop' }));
+    if (lv.nearestResistance) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestResistance.price, color: 'rgba(234,57,67,0.35)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Res' }));
   }
 
-  chart.timeScale().fitContent();
+  if (!state._fitted) { chart.timeScale().fitContent(); state._fitted = true; }
+  updateTradeOverlay();
+  renderLegend();
+}
+
+/** Incremental chart update for live ticks (preserves zoom/pan). */
+function renderChartLive() {
+  const c = state.candles;
+  const i = c.length - 1;
+  const last = c[i];
+  candleSeries.update({ time: last.time, open: last.open, high: last.high, low: last.low, close: last.close });
+  if (state.showEMA && state.ind) {
+    if (state.ind.ema21[i] != null) ema21Series.update({ time: last.time, value: state.ind.ema21[i] });
+    if (state.ind.ema50[i] != null) ema50Series.update({ time: last.time, value: state.ind.ema50[i] });
+    if (state.ind.ema200[i] != null) ema200Series.update({ time: last.time, value: state.ind.ema200[i] });
+  }
+  // refresh S/R lines occasionally via full render path is skipped here for performance
+  updateTradeOverlay();
   renderLegend();
 }
 
@@ -288,12 +361,12 @@ async function computeMTF() {
 }
 
 /* ---------------------- main analyze loop ---------------------- */
-async function analyze() {
+async function analyze(opts = {}) {
   if (state.loading) return;
+  const silent = opts.silent === true && state.candles.length > 0;
   state.loading = true;
   $('refreshBtn').classList.add('spinning');
-  $('chartLoader').classList.remove('hidden');
-  setStatus('Analizando…', '');
+  if (!silent) { $('chartLoader').classList.remove('hidden'); setStatus('Analizando…', ''); }
 
   try {
     const { candles, source } = await fetchCandles(state.tf, 400);
@@ -322,15 +395,62 @@ async function analyze() {
 
     $('dataSource').textContent = source;
     $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
-    setStatus(source === 'Simulado' ? 'Datos simulados' : 'En vivo', source === 'Simulado' ? 'error' : 'live');
+    setStatus(source === 'Simulado' ? 'Datos simulados (en vivo)' : 'En vivo · 24/7 (pestaña abierta)', source === 'Simulado' ? 'error' : 'live');
   } catch (e) {
     console.error(e);
     setStatus('Error: ' + e.message, 'error');
   } finally {
     state.loading = false;
     $('refreshBtn').classList.remove('spinning');
-    $('chartLoader').classList.add('hidden');
+    if (!silent) $('chartLoader').classList.add('hidden');
   }
+}
+
+/* ---------------------- live tick (no button needed) ---------------------- */
+async function liveTick() {
+  if (state.loading || !state.candles.length) return;
+  // Offline/simulated mode: evolve the last candle locally so it feels alive
+  if (state.source === 'Simulado') { evolveSyntheticLast(); return; }
+  try {
+    const { candles, source } = await fetchCandles(state.tf, 3);
+    if (source === 'Simulado' || !candles || !candles.length) return; // never pollute real data
+    mergeCandles(candles);
+    recomputeLive();
+  } catch (e) { /* transient network hiccup, ignore */ }
+}
+
+function mergeCandles(incoming) {
+  const arr = state.candles;
+  for (const c of incoming) {
+    const idx = arr.findIndex((x) => x.time === c.time);
+    if (idx >= 0) arr[idx] = c;
+    else if (c.time > arr[arr.length - 1].time) arr.push(c);
+  }
+  if (arr.length > 600) state.candles = arr.slice(-600);
+}
+
+function recomputeLive() {
+  state.ind = computeIndicators(state.candles);
+  state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
+  renderChartLive();
+  renderSignal();
+  renderIndicators();
+  renderPatterns();
+  maybeAlert(state.signal);
+  updatePriceHeader(state.ind.last.price, null);
+  $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+}
+
+/** Demo-mode price movement so the chart breathes when offline. */
+function evolveSyntheticLast() {
+  const arr = state.candles;
+  const last = arr[arr.length - 1];
+  const step = last.close * 0.0008;
+  const nc = Math.max(1, last.close + (Math.random() - 0.5) * 2 * step);
+  last.close = Math.round(nc * 100) / 100;
+  last.high = Math.max(last.high, last.close);
+  last.low = Math.min(last.low, last.close);
+  recomputeLive();
 }
 
 function updatePriceHeader(price, changePct) {
@@ -441,6 +561,8 @@ function bindControls() {
     document.querySelectorAll('#tfSelector .tf-btn').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     state.tf = btn.dataset.tf;
+    state._fitted = false;        // re-fit the chart for the new timeframe
+    state.lastAlertKey = null;    // don't fire an alert just because we switched TF
     $('chartTf').textContent = btn.textContent;
     analyze();
   });
@@ -503,9 +625,12 @@ function bindControls() {
 
 function setupAutoRefresh() {
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   if (state.autoRefresh) {
-    // refresh cadence scaled to timeframe, min 30s
-    refreshTimer = setInterval(() => { if (!document.hidden) analyze(); }, 60000);
+    // fast live loop: updates candles, indicators, signal & boxes (no button)
+    liveTimer = setInterval(() => { if (!document.hidden) liveTick(); }, 7000);
+    // full re-analysis incl. multi-timeframe bias, runs quietly in the background
+    refreshTimer = setInterval(() => { if (!document.hidden) analyze({ silent: true }); }, 300000);
   }
 }
 
@@ -520,6 +645,11 @@ function boot() {
   setupAutoRefresh();
   pollTicker();
   setInterval(pollTicker, 15000);
+
+  // catch up instantly when the user comes back to the tab
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.autoRefresh) { liveTick(); pollTicker(); }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', boot);

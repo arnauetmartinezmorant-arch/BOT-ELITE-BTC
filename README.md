@@ -13,6 +13,8 @@ alertas sonoras + notificaciones y diario de trades.
 ## ✨ Funcionalidades
 
 - **Gráfico de velas en vivo** (TradingView Lightweight Charts) con EMAs y niveles.
+- **Caja de posición estilo TradingView**: el trade completo se dibuja con una **zona verde (TP)** y una **zona roja (SL)** sobre el gráfico, con la línea de entrada.
+- **Actualización automática en vivo**: las velas, indicadores, señal y cajas se refrescan solos cada pocos segundos. No hace falta pulsar ningún botón.
 - **7 temporalidades**: 1m, 5m, 15m, 1H, 4H, 1D, 1W.
 - **Motor de señales por confluencia**: combina tendencia, EMAs, RSI, MACD,
   Estocástico, ADX, volumen, patrones y sesgo multi-temporalidad.
@@ -78,6 +80,22 @@ js/
   alerts.js           Sonido (Web Audio) + notificaciones
   journal.js          Diario de trades (localStorage) + estadísticas en R
 ```
+
+---
+
+## ⏱️ ¿Funciona 24/7?
+
+Mientras la pestaña esté **abierta**, sí: el bot vigila el mercado en tiempo real,
+actualiza las velas solo y te avisa con sonido + notificación cuando aparece una
+señal nueva (incluso con la pestaña en segundo plano, el sistema mostrará la
+notificación).
+
+Pero ojo, esto es una **app de navegador**: si cierras el navegador o apagas el
+ordenador, deja de vigilar. Para un **24/7 real** (que siga monitorizando con el PC
+apagado y te mande alertas al móvil, p. ej. por Telegram), hace falta un pequeño
+**servidor backend**. Eso es un siguiente paso opcional que se puede construir.
+
+---
 
 ## 🧠 Cómo decide el bot
 
