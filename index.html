@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC Quant Terminal — Bot de Trading Bitcoin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- ======================= TOP BAR ======================= -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+            <circle cx="16" cy="16" r="16" fill="#f7931a"/>
+            <path d="M21.5 14.1c.3-1.9-1.2-2.9-3.2-3.6l.7-2.6-1.6-.4-.6 2.5c-.4-.1-.9-.2-1.3-.3l.6-2.6-1.6-.4-.7 2.6c-.3-.1-.7-.2-1-.2l-2.2-.6-.4 1.7s1.2.3 1.2.3c.7.2.8.6.8.9l-.8 3c0 .1.1.1.1.2h-.1l-1.1 4.2c-.1.2-.3.5-.7.4 0 0-1.2-.3-1.2-.3l-.8 1.8 2.1.5c.4.1.8.2 1.1.3l-.7 2.7 1.6.4.7-2.6c.4.1.9.2 1.3.3l-.6 2.6 1.6.4.7-2.7c2.7.5 4.8.3 5.6-2.2.7-2-.03-3.1-1.5-3.9 1.1-.2 1.9-.9 2.1-2.4zm-3.7 5.1c-.5 2-3.8.9-4.9.6l.9-3.5c1.1.3 4.5.8 4 2.9zm.5-5.2c-.4 1.8-3.2.9-4.1.7l.8-3.2c.9.2 3.8.6 3.3 2.5z" fill="#fff"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>BTC Quant Terminal</h1>
+          <span class="brand-sub">Análisis algorítmico multi-temporalidad</span>
+        </div>
+      </div>
+
+      <div class="price-block">
+        <div class="price-main">
+          <span class="price-label">BTC / USDT</span>
+          <span id="livePrice" class="price-value">—</span>
+        </div>
+        <div class="price-meta">
+          <span id="priceChange" class="price-change">—</span>
+          <span class="price-divider">·</span>
+          <span class="price-24h">24h</span>
+        </div>
+      </div>
+
+      <div class="status-block">
+        <div class="status-item">
+          <span class="status-dot" id="connDot"></span>
+          <span id="connStatus" class="status-text">Conectando…</span>
+        </div>
+        <div class="status-item">
+          <span class="status-muted">Fuente:</span>
+          <span id="dataSource" class="status-text">—</span>
+        </div>
+        <div class="status-item">
+          <span class="status-muted">Actualizado:</span>
+          <span id="lastUpdate" class="status-text">—</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======================= CONTROLS ======================= -->
+    <section class="controls">
+      <div class="control-group">
+        <label class="control-label">Temporalidad</label>
+        <div id="tfSelector" class="tf-selector">
+          <button class="tf-btn" data-tf="1m">1m</button>
+          <button class="tf-btn" data-tf="5m">5m</button>
+          <button class="tf-btn" data-tf="15m">15m</button>
+          <button class="tf-btn" data-tf="1h">1H</button>
+          <button class="tf-btn active" data-tf="4h">4H</button>
+          <button class="tf-btn" data-tf="1d">1D</button>
+          <button class="tf-btn" data-tf="1w">1W</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Modo de riesgo</label>
+        <div id="riskSelector" class="tf-selector">
+          <button class="tf-btn" data-risk="conservador">Conservador</button>
+          <button class="tf-btn active" data-risk="equilibrado">Equilibrado</button>
+          <button class="tf-btn" data-risk="agresivo">Agresivo</button>
+        </div>
+      </div>
+
+      <div class="control-group control-toggles">
+        <label class="control-label">Visualización</label>
+        <div class="toggle-row">
+          <label class="switch"><input type="checkbox" id="toggleEMA" checked /><span class="slider"></span><span class="switch-text">EMAs</span></label>
+          <label class="switch"><input type="checkbox" id="toggleLevels" checked /><span class="slider"></span><span class="switch-text">Niveles</span></label>
+          <label class="switch"><input type="checkbox" id="toggleAuto" checked /><span class="slider"></span><span class="switch-text">Auto-refresco</span></label>
+          <label class="switch"><input type="checkbox" id="toggleAlerts" checked /><span class="slider"></span><span class="switch-text">🔔 Alertas</span></label>
+        </div>
+      </div>
+
+      <button id="refreshBtn" class="refresh-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <span>Analizar ahora</span>
+      </button>
+    </section>
+
+    <!-- ======================= MAIN GRID ======================= -->
+    <main class="main-grid">
+      <!-- CHART -->
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <h2>Gráfico de velas <span id="chartTf" class="tag">4H</span></h2>
+          <div class="legend" id="chartLegend"></div>
+        </div>
+        <div id="chart" class="chart-container"></div>
+        <div id="chartLoader" class="chart-loader"><div class="spinner"></div><span>Cargando datos de mercado…</span></div>
+      </section>
+
+      <!-- SIGNAL -->
+      <aside class="panel signal-panel">
+        <div class="panel-head">
+          <h2>Señal del bot</h2>
+          <span id="signalTime" class="tag tag-muted">—</span>
+        </div>
+        <div id="signalCard" class="signal-card neutral">
+          <div class="signal-direction">
+            <span id="signalDir" class="signal-dir-text">ESPERANDO</span>
+            <span id="signalConviction" class="signal-conviction">Analizando mercado…</span>
+          </div>
+          <div class="conviction-bar"><div id="convictionFill" class="conviction-fill"></div></div>
+
+          <div class="signal-levels">
+            <div class="level-row level-entry">
+              <span class="level-name">Entrada</span>
+              <span id="lvlEntry" class="level-val">—</span>
+            </div>
+            <div class="level-row level-sl">
+              <span class="level-name">Stop Loss</span>
+              <span id="lvlSL" class="level-val">—</span>
+            </div>
+            <div class="level-row level-tp">
+              <span class="level-name">TP 1</span>
+              <span id="lvlTP1" class="level-val">—</span>
+            </div>
+            <div class="level-row level-tp">
+              <span class="level-name">TP 2 <span class="rr-badge">2:1</span></span>
+              <span id="lvlTP2" class="level-val">—</span>
+            </div>
+          </div>
+
+          <div class="signal-stats">
+            <div class="stat"><span class="stat-label">Riesgo/Beneficio</span><span id="statRR" class="stat-val">—</span></div>
+            <div class="stat"><span class="stat-label">Riesgo %</span><span id="statRisk" class="stat-val">—</span></div>
+            <div class="stat"><span class="stat-label">Confluencia</span><span id="statScore" class="stat-val">—</span></div>
+          </div>
+
+          <div id="signalReasons" class="signal-reasons"></div>
+
+          <button id="logTradeBtn" class="log-trade-btn" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Registrar este trade en el diario</span>
+          </button>
+        </div>
+        <p class="disclaimer">⚠️ Esto NO es asesoramiento financiero. El bot identifica oportunidades de alta probabilidad, no certezas. Opera siempre con gestión de riesgo.</p>
+      </aside>
+
+      <!-- INDICATORS -->
+      <section class="panel indicators-panel">
+        <div class="panel-head"><h2>Indicadores en vivo</h2></div>
+        <div id="indicatorsGrid" class="indicators-grid"></div>
+      </section>
+
+      <!-- MULTI TIMEFRAME -->
+      <section class="panel mtf-panel">
+        <div class="panel-head"><h2>Mapa multi-temporalidad</h2><span class="tag tag-muted">Sesgo por marco</span></div>
+        <div id="mtfGrid" class="mtf-grid"></div>
+      </section>
+
+      <!-- PATTERNS -->
+      <section class="panel patterns-panel">
+        <div class="panel-head"><h2>Patrones detectados</h2><span id="patternCount" class="tag tag-muted">0</span></div>
+        <div id="patternsList" class="patterns-list"></div>
+      </section>
+
+      <!-- JOURNAL -->
+      <section class="panel journal-panel">
+        <div class="panel-head">
+          <h2>Diario de trades</h2>
+          <button id="clearJournalBtn" class="mini-btn">Vaciar</button>
+        </div>
+        <div id="journalStats" class="journal-stats"></div>
+        <div id="journalList" class="journal-list"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>BTC Quant Terminal · Motor de confluencia v1.0</span>
+      <span class="footer-muted">Datos de mercado en tiempo real · Solo fines educativos</span>
+    </footer>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
