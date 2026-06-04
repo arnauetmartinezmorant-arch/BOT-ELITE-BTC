@@ -7,12 +7,36 @@
 
 import { detectAllPatterns } from './patterns.js';
 
-/** Risk profiles tune how strict the bot is before it fires a trade. */
+/** Risk profiles tune how strict the bot is before it fires a trade.
+ *  - Normal:      sensible default, balanced frequency.
+ *  - Conservador: stricter, fewer & safer trades.
+ *  - Premium:     ultra-selective. Only a couple of A+ trades a day — needs
+ *                 huge confluence (many indicators aligned + trend + higher
+ *                 timeframes agreeing + a confirming pattern). */
 const RISK_PROFILES = {
+  normal:      { minScore: 5.0, minConviction: 62, atrMult: 1.4, label: 'Normal' },
   conservador: { minScore: 6.5, minConviction: 75, atrMult: 1.6, label: 'Conservador' },
-  equilibrado: { minScore: 5.0, minConviction: 62, atrMult: 1.4, label: 'Equilibrado' },
-  agresivo:    { minScore: 3.8, minConviction: 50, atrMult: 1.2, label: 'Agresivo' },
+  premium:     { minScore: 6.0, minConviction: 76, atrMult: 1.8, label: 'Premium',
+                 minConfirmations: 8, requireMTF: true, minAdx: 25 },
 };
+
+/** Count how many independent confirmations point the same way (max 9).
+ *  Used by the Premium profile to demand overwhelming agreement. */
+function countConfirmations(ind, analysis, dir) {
+  const L = ind.last;
+  const bull = dir === 'long';
+  let c = 0;
+  if (L.ema21 != null && L.ema50 != null && (bull ? L.ema21 > L.ema50 : L.ema21 < L.ema50)) c++;     // EMA structure
+  if (L.ema200 != null && (bull ? L.price > L.ema200 : L.price < L.ema200)) c++;                      // macro EMA200
+  if (L.rsi != null && (bull ? L.rsi > 50 : L.rsi < 50)) c++;                                         // RSI side
+  if (L.macdHist != null && (bull ? L.macdHist > 0 : L.macdHist < 0)) c++;                            // MACD
+  if (L.stochK != null && L.stochD != null && (bull ? L.stochK > L.stochD : L.stochK < L.stochD)) c++;// Stochastic
+  if (L.adx != null && L.adx > 22) c++;                                                               // trend strength
+  if (L.relVol > 1.2) c++;                                                                            // volume
+  if (analysis.patterns.some((p) => p.dir === (bull ? 'bull' : 'bear'))) c++;                         // candle/chart pattern
+  if (analysis.trend.dir === (bull ? 'up' : 'down')) c++;                                             // overall trend
+  return c;
+}
 
 /**
  * Build a weighted confluence score. Positive = bullish, negative = bearish.
@@ -139,8 +163,8 @@ function buildTradePlan(dir, ind, analysis, profile) {
  * Main entry point. Returns a full signal object for the UI.
  *  signal.direction: 'long' | 'short' | 'none'
  */
-export function generateSignal(candles, ind, riskKey = 'equilibrado', mtfBias = null) {
-  const profile = RISK_PROFILES[riskKey] || RISK_PROFILES.equilibrado;
+export function generateSignal(candles, ind, riskKey = 'normal', mtfBias = null) {
+  const profile = RISK_PROFILES[riskKey] || RISK_PROFILES.normal;
   const analysis = detectAllPatterns(candles, ind);
   const { score, factors } = scoreConfluence(candles, ind, analysis, mtfBias);
 
@@ -154,7 +178,28 @@ export function generateSignal(candles, ind, riskKey = 'equilibrado', mtfBias = 
   const agreement = (aligned / total) * 100;
   const conviction = Math.round(Math.min(100, (absScore / 9) * 55 + agreement * 0.45));
 
-  const passes = absScore >= profile.minScore && conviction >= profile.minConviction;
+  // base gate
+  let passes = absScore >= profile.minScore && conviction >= profile.minConviction;
+
+  // Premium extra gates: demand overwhelming, multi-source agreement
+  const confirmations = countConfirmations(ind, analysis, rawDir);
+  let blockReason = null;
+  if (passes && profile.minConfirmations && confirmations < profile.minConfirmations) {
+    passes = false;
+    blockReason = `Premium exige ${profile.minConfirmations}/9 indicadores alineados (hay ${confirmations}).`;
+  }
+  if (passes && profile.minAdx && (ind.last.adx == null || ind.last.adx < profile.minAdx)) {
+    passes = false;
+    blockReason = `Premium exige tendencia fuerte (ADX ≥ ${profile.minAdx}).`;
+  }
+  if (passes && profile.requireMTF && mtfBias) {
+    const agree = (rawDir === 'long' && mtfBias.score > 0) || (rawDir === 'short' && mtfBias.score < 0);
+    if (!agree) { passes = false; blockReason = 'Premium exige que los marcos superiores acompañen.'; }
+  }
+  if (passes && profile.requirePattern && !analysis.patterns.some((p) => p.dir === (rawDir === 'long' ? 'bull' : 'bear'))) {
+    passes = false;
+    blockReason = 'Premium exige un patrón (vela/figura) que confirme la entrada.';
+  }
 
   // Build reasons (top factors by weight)
   const sorted = [...factors].sort((a, b) => b.weight - a.weight);
@@ -165,16 +210,19 @@ export function generateSignal(candles, ind, riskKey = 'equilibrado', mtfBias = 
   }));
 
   if (!passes) {
+    let message;
+    if (blockReason) message = blockReason;
+    else if (absScore < profile.minScore) message = `Confluencia insuficiente (${absScore.toFixed(1)} / ${profile.minScore} requerido).`;
+    else message = `Convicción insuficiente (${conviction}% / ${profile.minConviction}% requerido).`;
     return {
       direction: 'none',
       conviction,
       score,
       absScore,
+      confirmations,
       analysis,
       reasons: reasons.length ? reasons : [{ text: 'Sin confluencia suficiente. El bot espera una mejor oportunidad.', cls: 'warn', icon: '⏸' }],
-      message: absScore < profile.minScore
-        ? `Confluencia insuficiente (${absScore.toFixed(1)} / ${profile.minScore} requerido).`
-        : `Convicción insuficiente (${conviction}% / ${profile.minConviction}% requerido).`,
+      message,
       profile: profile.label,
       plan: null,
     };
@@ -187,12 +235,15 @@ export function generateSignal(candles, ind, riskKey = 'equilibrado', mtfBias = 
     conviction,
     score,
     absScore,
+    confirmations,
     analysis,
     plan,
     reasons,
-    message: rawDir === 'long'
-      ? 'Confluencia alcista de alta probabilidad detectada.'
-      : 'Confluencia bajista de alta probabilidad detectada.',
+    message: profile.minConfirmations
+      ? `Trade Premium A+ · ${confirmations}/9 indicadores alineados.`
+      : (rawDir === 'long'
+          ? 'Confluencia alcista de alta probabilidad detectada.'
+          : 'Confluencia bajista de alta probabilidad detectada.'),
     profile: profile.label,
   };
 }

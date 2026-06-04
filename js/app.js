@@ -12,7 +12,7 @@ const LWC = window.LightweightCharts;
 
 const state = {
   tf: '4h',
-  risk: 'equilibrado',
+  risk: 'normal',
   candles: [],
   ind: null,
   signal: null,
@@ -869,6 +869,26 @@ function bindControls() {
 
   // prime audio + notifications on first interaction anywhere
   window.addEventListener('pointerdown', primeAudio, { once: true });
+
+  // fullscreen for just the chart panel
+  $('fullscreenBtn').addEventListener('click', () => {
+    const el = document.querySelector('.chart-panel');
+    const inFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!inFs) {
+      (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
+    }
+  });
+  const onFsChange = () => {
+    const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    $('fullscreenBtn').classList.toggle('active', inFs);
+    $('fullscreenBtn').title = inFs ? 'Salir de pantalla completa' : 'Pantalla completa';
+    // give the layout a tick, then keep the latest candles in view + reposition boxes
+    setTimeout(() => { if (chart) { try { chart.timeScale().scrollToRealTime(); } catch (e) {} updateTradeOverlay(); } }, 120);
+  };
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
 }
 
 function setupAutoRefresh() {

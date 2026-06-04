@@ -23,7 +23,13 @@ alertas sonoras + notificaciones y diario de trades.
 - **Planes de trade**: Entrada + Stop Loss (ATR + estructura) + TP1 (1:1) y TP2 (2:1).
 - **Detección de patrones**: banderas, triángulos, velas japonesas, soportes/
   resistencias y **manipulación / barridos de liquidez** (stop hunts).
-- **3 modos de riesgo**: Conservador, Equilibrado, Agresivo.
+- **3 modos de riesgo**:
+  - **Normal** — frecuencia equilibrada (por defecto).
+  - **Conservador** — más estricto, menos trades y más seguros.
+  - **⭐ Premium** — ultra-selectivo: solo dispara con confluencia abrumadora
+    (≥ 8/9 indicadores alineados + tendencia fuerte por ADX + marcos superiores a
+    favor). Pensado para un par de trades A+ al día.
+- **Pantalla completa del gráfico**: botón ⛶ para ver solo las velas a pantalla completa.
 - **Mapa multi-temporalidad**: sesgo alcista/bajista en cada marco.
 - **🔔 Alertas**: sonido (Web Audio) + notificaciones del navegador en cada señal nueva.
 - **📓 Diario de trades**: registra operaciones, marca el resultado (TP2/TP1/SL/BE),
