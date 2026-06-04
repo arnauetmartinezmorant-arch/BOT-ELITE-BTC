@@ -87,6 +87,13 @@ js/
   signals.js          Motor de confluencia + planes de trade 2:1
   alerts.js           Sonido (Web Audio) + notificaciones
   journal.js          Diario de trades (localStorage) + estadísticas en R
+server/               Bot de Telegram 24/7 (reutiliza js/ como motor)
+  index.js            Bucle que escanea el mercado y envía señales
+  config.js           Configuración por variables de entorno
+  telegram.js         Envío a la API de Telegram
+  format.js           Formato del mensaje de señal
+  .env.example        Plantilla de configuración
+package.json          Scripts: npm start (bot) · npm run selftest
 ```
 
 ---
@@ -99,9 +106,54 @@ señal nueva (incluso con la pestaña en segundo plano, el sistema mostrará la
 notificación).
 
 Pero ojo, esto es una **app de navegador**: si cierras el navegador o apagas el
-ordenador, deja de vigilar. Para un **24/7 real** (que siga monitorizando con el PC
-apagado y te mande alertas al móvil, p. ej. por Telegram), hace falta un pequeño
-**servidor backend**. Eso es un siguiente paso opcional que se puede construir.
+ordenador, deja de vigilar. Para un **24/7 real** existe el **bot de Telegram**
+(carpeta `server/`), que sí monitoriza con tu ordenador apagado. Ver abajo. 👇
+
+---
+
+## 🤖 Bot de Telegram 24/7 (un canal por modo)
+
+En `server/` hay un bot de Node.js que reutiliza **exactamente el mismo motor de
+análisis** que la web y envía las señales a Telegram, con **un canal por cada modo**
+(Normal, Conservador, Premium). Así puedes seguir solo el modo que te interese.
+
+### Puesta en marcha
+1. **Crea el bot**: habla con [@BotFather](https://t.me/BotFather) → `/newbot` → copia el **token**.
+2. **Crea 3 canales** en Telegram (uno por modo) y **añade tu bot como administrador** en cada uno.
+3. Consigue el identificador de cada canal: el `@usuario` (canal público) o el `chat_id`
+   numérico (privado, suele empezar por `-100…`).
+4. Configura las variables de entorno (ver `server/.env.example`):
+   ```bash
+   export TELEGRAM_BOT_TOKEN="tu_token"
+   export TELEGRAM_CHAT_NORMAL="@tu_canal_normal"
+   export TELEGRAM_CHAT_CONSERVADOR="@tu_canal_conservador"
+   export TELEGRAM_CHAT_PREMIUM="@tu_canal_premium"
+   ```
+5. Arranca:
+   ```bash
+   npm start
+   ```
+   Prueba sin enviar nada (imprime en consola):
+   ```bash
+   DRY_RUN=1 npm start
+   # o el smoke test offline:
+   npm run selftest
+   ```
+
+### Despliegue 24/7 (gratis)
+Súbelo a **Render** o **Railway** como *Background Worker / Service*:
+- Build: `npm install` (no hay dependencias, es instantáneo)
+- Start: `npm start`
+- Variables de entorno: las de arriba
+
+El servicio escanea el mercado cada `CHECK_INTERVAL_SEC` segundos en las
+temporalidades de `TIMEFRAMES`, y solo manda una señal por modo cuando se cumplen
+sus condiciones (no repite la misma antes de `COOLDOWN_MIN` minutos). Cada modo
+publica en **su** canal, con entrada, SL, TP1, TP2 (2:1), convicción e indicadores
+alineados.
+
+> ⚠️ Solo envía señales con **datos reales**; si la API de mercado no está disponible
+> ese ciclo se omite (no inventa señales).
 
 ---
 

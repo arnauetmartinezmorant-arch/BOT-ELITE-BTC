@@ -1,3 +1,8 @@
+# Secrets — never commit real tokens
+.env
+.env.local
+server/.env
+
 # Dependencies
 node_modules/
 

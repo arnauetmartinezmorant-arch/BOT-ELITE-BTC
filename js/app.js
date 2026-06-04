@@ -25,7 +25,7 @@ const state = {
   lastAlertKey: null,
   lastLoggedKey: null,
   livePrice: null,
-  activeTrade: null,
+  activeTrades: {},
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -98,8 +98,8 @@ function priceScaleWidth() {
 
 function updateTradeOverlay() {
   if (!overlayEl) return;
-  const at = state.activeTrade;
-  // Boxes are drawn ONLY for a taken (frozen) trade → clean candles otherwise.
+  const at = currentActiveTrade();
+  // Boxes are drawn ONLY for a taken (frozen) trade on THIS timeframe+mode.
   const show = state.showLevels && at;
   overlayEl.style.display = show ? 'block' : 'none';
   if (!show) return;
@@ -200,8 +200,9 @@ function renderLegend() {
 /* ---------------------- UI renderers ---------------------- */
 function renderSignal() {
   const s = state.signal;
-  // When a trade is taken, show the FROZEN trade instead of the live suggestion.
-  if (state.activeTrade) { renderActiveTrade(); return; }
+  // When a trade is taken on THIS timeframe+mode, show the FROZEN trade.
+  const at = currentActiveTrade();
+  if (at) { renderActiveTrade(at); return; }
 
   const card = $('signalCard');
   const dir = $('signalDir');
@@ -240,6 +241,13 @@ function renderSignal() {
     .map((r) => `<div class="reason ${r.cls}"><span class="reason-icon">${r.icon}</span><span>${r.text}</span></div>`)
     .join('');
 
+  // hint: you have frozen trades open on other timeframe/mode views
+  const others = Object.values(state.activeTrades).filter((t) => `${t.tf}:${t.risk}` !== activeKey());
+  if (others.length) {
+    const list = others.map((t) => `${t.tf.toUpperCase()}/${labelForRisk(t.risk)}`).join(', ');
+    $('signalConviction').textContent += ` · 🔒 Activo en ${list}`;
+  }
+
   // button: take (freeze) the current suggestion as a real trade
   const logBtn = $('logTradeBtn');
   logBtn.classList.remove('danger', 'logged');
@@ -252,29 +260,37 @@ function renderSignal() {
   }
 }
 
-/* ---------------------- active (frozen) trade ---------------------- */
-const ACTIVE_KEY = 'btcQuantActiveTrade_v1';
+/* ---------------------- active (frozen) trades ---------------------- */
+/* Trades are stored per "timeframe:mode" key, so a frozen trade only shows
+ * on the exact timeframe AND risk mode it was taken on. */
+const ACTIVE_KEY = 'btcQuantActiveTrades_v2';
+
+function activeKey(tf = state.tf, risk = state.risk) { return `${tf}:${risk}`; }
+function currentActiveTrade() { return state.activeTrades[activeKey()] || null; }
+function hasAnyActiveTrade() { return Object.keys(state.activeTrades).length > 0; }
+const RISK_LABELS = { normal: 'Normal', conservador: 'Conservador', premium: 'Premium' };
+function labelForRisk(r) { return RISK_LABELS[r] || r; }
 
 function saveActiveTrade() {
   try {
-    if (state.activeTrade) localStorage.setItem(ACTIVE_KEY, JSON.stringify(state.activeTrade));
+    if (hasAnyActiveTrade()) localStorage.setItem(ACTIVE_KEY, JSON.stringify(state.activeTrades));
     else localStorage.removeItem(ACTIVE_KEY);
   } catch (e) { /* ignore */ }
 }
 function loadActiveTrade() {
-  try { const raw = localStorage.getItem(ACTIVE_KEY); if (raw) state.activeTrade = JSON.parse(raw); } catch (e) {}
+  try { const raw = localStorage.getItem(ACTIVE_KEY); if (raw) state.activeTrades = JSON.parse(raw) || {}; } catch (e) {}
 }
 
 function takeTrade() {
   const s = state.signal;
-  if (!s || !s.plan || state.activeTrade) return;
+  if (!s || !s.plan || currentActiveTrade()) return;   // one trade per tf+mode
   const jt = addTrade(s, state.tf);   // log frozen snapshot to the journal
-  state.activeTrade = {
+  state.activeTrades[activeKey()] = {
     id: jt ? jt.id : 'at-' + Date.now(),
     dir: s.direction,
     entry: s.plan.entry, stop: s.plan.stop, tp1: s.plan.tp1, tp2: s.plan.tp2,
     riskPct: s.plan.riskPct, conviction: s.conviction,
-    tf: state.tf, time: Date.now(), mfe: 0, lastEvent: null,
+    tf: state.tf, risk: state.risk, time: Date.now(), mfe: 0, lastEvent: null,
   };
   saveActiveTrade();
   renderSignal();
@@ -283,7 +299,7 @@ function takeTrade() {
 }
 
 function closeActiveTrade() {
-  const at = state.activeTrade;
+  const at = currentActiveTrade();
   if (!at) return;
   const t = getTrades().find((x) => x.id === at.id);
   if (t && t.status === 'open') {
@@ -298,22 +314,21 @@ function closeActiveTrade() {
     else outcome = 'be';   // small +/- moves count as break-even (honest stats)
     resolveTrade(at.id, outcome);
   }
-  state.activeTrade = null;
+  delete state.activeTrades[activeKey()];
   saveActiveTrade();
   renderJournal();
   renderSignal();
   updateTradeOverlay();
 }
 
-function renderActiveTrade() {
-  const at = state.activeTrade;
+function renderActiveTrade(at) {
   const card = $('signalCard');
   const fill = $('convictionFill');
 
   card.className = 'signal-card ' + at.dir;
   $('signalTime').textContent = new Date(at.time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   $('signalDir').textContent = at.dir === 'long' ? 'LONG ▲' : 'SHORT ▼';
-  $('signalConviction').textContent = `TRADE ACTIVO · niveles congelados · ${at.tf.toUpperCase()}`;
+  $('signalConviction').textContent = `TRADE ACTIVO · congelado · ${at.tf.toUpperCase()} · ${labelForRisk(at.risk)}`;
   fill.style.width = at.conviction + '%';
   fill.style.background = at.dir === 'long' ? 'var(--long)' : 'var(--short)';
 
@@ -341,7 +356,7 @@ function renderActiveTrade() {
 /** Live P&L tracker for the active trade. Updates the status block ONLY;
  *  the frozen entry/SL/TP levels above are never touched. */
 function updateActiveTradeStatus() {
-  const at = state.activeTrade;
+  const at = currentActiveTrade();
   if (!at) return;
   const price = state.livePrice || at.entry;
   const isLong = at.dir === 'long';
@@ -368,7 +383,7 @@ function updateActiveTradeStatus() {
     if (eventKey === 'tp2') { resolveTrade(at.id, 'win2'); renderJournal(); playAlertSound('long'); }
     else if (eventKey === 'sl') { resolveTrade(at.id, 'loss'); renderJournal(); playAlertSound('short'); }
     else if (eventKey === 'be') { playAlertSound('short'); }
-    notifyText(`Trade ${at.dir.toUpperCase()} · ${at.tf.toUpperCase()}`, status);
+    notifyText(`Trade ${at.dir.toUpperCase()} · ${at.tf.toUpperCase()} · ${labelForRisk(at.risk)}`, status);
     saveActiveTrade();
   }
 
@@ -625,7 +640,7 @@ function applyLiveKline(k) {
   $('livePrice').textContent = fmtPrice(c.close);
   $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
   refreshJournalLive();
-  if (state.activeTrade) updateActiveTradeStatus();   // smooth live P&L (levels stay frozen)
+  if (currentActiveTrade()) updateActiveTradeStatus();   // smooth live P&L (levels stay frozen)
   state._needRecompute = true;             // indicators/signal refresh on throttle
 }
 
@@ -645,7 +660,7 @@ function startRestPolling() {
       $('livePrice').textContent = fmtPrice(last.close);
       $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
       refreshJournalLive();
-      if (state.activeTrade) updateActiveTradeStatus();
+      if (currentActiveTrade()) updateActiveTradeStatus();
       state._needRecompute = true;
       if (!wsAlive) setStatus('En vivo · sondeo (cada 3s)', 'live');
     } catch (e) { /* transient */ }
@@ -668,7 +683,7 @@ function startRecomputeLoop() {
     renderIndicators();
     renderPatterns();
     maybeAlert(state.signal);
-    if (state.activeTrade) saveActiveTrade();
+    if (currentActiveTrade()) saveActiveTrade();
   }, 1200);
 }
 function stopRecomputeLoop() {
@@ -698,7 +713,7 @@ function evolveSyntheticLast() {
   state.livePrice = last.close;
   $('livePrice').textContent = fmtPrice(last.close);
   refreshJournalLive();
-  if (state.activeTrade) updateActiveTradeStatus();
+  if (currentActiveTrade()) updateActiveTradeStatus();
   state._needRecompute = true;
 }
 
@@ -717,7 +732,7 @@ function updatePriceHeader(price, changePct) {
 /* ---------------------- alerts ---------------------- */
 function maybeAlert(signal) {
   // While a trade is active, we don't alert on new suggestions (you're already in).
-  if (state.activeTrade) return;
+  if (currentActiveTrade()) return;
   const key = signal.direction === 'none' ? `${state.tf}:none` : `${state.tf}:${signal.direction}`;
   if (key === state.lastAlertKey) return;        // same state, no spam
   const prev = state.lastAlertKey;
@@ -846,7 +861,7 @@ function bindControls() {
   // take (freeze) the current signal as a trade, or close the active one
   $('logTradeBtn').addEventListener('click', () => {
     primeAudio();
-    if (state.activeTrade) closeActiveTrade();
+    if (currentActiveTrade()) closeActiveTrade();
     else takeTrade();
   });
 

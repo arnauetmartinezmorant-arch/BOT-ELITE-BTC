@@ -1,0 +1,14 @@
+{
+  "name": "btc-quant-terminal",
+  "version": "1.0.0",
+  "description": "Terminal de analisis de Bitcoin (frontend) + bot de alertas a Telegram por modo (backend 24/7)",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "selftest": "node server/_selftest.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
