@@ -80,3 +80,13 @@ export function notifySignal(signal, tf) {
 function fmt(v) {
   return v == null ? '—' : '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
+
+/** Generic notification (used for active-trade events: TP/SL/break-even). */
+export function notifyText(title, body) {
+  if (!enabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, { body, tag: 'btc-quant-event' });
+    setTimeout(() => n.close(), 9000);
+  } catch (e) { /* ignore */ }
+}

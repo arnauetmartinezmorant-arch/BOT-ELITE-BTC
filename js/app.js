@@ -5,7 +5,7 @@
 import { fetchCandles, fetchTicker, TF_SECONDS } from './data.js';
 import { computeIndicators } from './indicators.js';
 import { generateSignal, timeframeBias } from './signals.js';
-import { setAlertsEnabled, primeAudio, playAlertSound, requestNotifyPermission, notifySignal } from './alerts.js';
+import { setAlertsEnabled, primeAudio, playAlertSound, requestNotifyPermission, notifySignal, notifyText } from './alerts.js';
 import { getTrades, addTrade, resolveTrade, deleteTrade, clearAll, getStats, liveR } from './journal.js';
 
 const LWC = window.LightweightCharts;
@@ -25,6 +25,7 @@ const state = {
   lastAlertKey: null,
   lastLoggedKey: null,
   livePrice: null,
+  activeTrade: null,
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -97,41 +98,43 @@ function priceScaleWidth() {
 
 function updateTradeOverlay() {
   if (!overlayEl) return;
-  const s = state.signal;
-  const show = state.showLevels && s && s.plan;
+  const at = state.activeTrade;
+  // Boxes are drawn ONLY for a taken (frozen) trade → clean candles otherwise.
+  const show = state.showLevels && at;
   overlayEl.style.display = show ? 'block' : 'none';
   if (!show) return;
 
-  const p = s.plan;
   const W = $('chart').clientWidth;
   const H = $('chart').clientHeight;
   const psW = priceScaleWidth();
   const paneW = Math.max(60, W - psW);
-  const boxW = Math.min(paneW * 0.46, 300);
+  const boxW = Math.min(paneW * 0.4, 240);
   const left = Math.max(0, paneW - boxW);
 
-  const clampY = (y) => Math.max(0, Math.min(H, y));
-  const yE = clampY(candleSeries.priceToCoordinate(p.entry));
-  const ySL = clampY(candleSeries.priceToCoordinate(p.stop));
-  const yTP = clampY(candleSeries.priceToCoordinate(p.tp2));
+  const yE = candleSeries.priceToCoordinate(at.entry);
+  const ySLraw = candleSeries.priceToCoordinate(at.stop);
+  const yTPraw = candleSeries.priceToCoordinate(at.tp2);
+  if (yE == null || ySLraw == null || yTPraw == null) { overlayEl.style.display = 'none'; return; }
+  const clampY = (y) => Math.max(-4, Math.min(H + 4, y));
+  const ye = clampY(yE), ySL = clampY(ySLraw), yTP = clampY(yTPraw);
 
   const set = (el, css) => { const n = overlayEl.querySelector(`[data-el="${el}"]`); Object.assign(n.style, css); return n; };
-  const isLong = s.direction === 'long';
 
-  // green profit zone: between entry and TP2
-  set('tp', { left: left + 'px', width: boxW + 'px', top: Math.min(yE, yTP) + 'px', height: Math.abs(yTP - yE) + 'px' });
-  // red loss zone: between entry and SL
-  set('sl', { left: left + 'px', width: boxW + 'px', top: Math.min(yE, ySL) + 'px', height: Math.abs(ySL - yE) + 'px' });
-  // entry line
-  set('entryLine', { left: left + 'px', width: boxW + 'px', top: yE + 'px' });
+  // green profit zone (entry → TP2) and red loss zone (entry → SL)
+  set('tp', { left: left + 'px', width: boxW + 'px', top: Math.min(ye, yTP) + 'px', height: Math.abs(yTP - ye) + 'px' });
+  set('sl', { left: left + 'px', width: boxW + 'px', top: Math.min(ye, ySL) + 'px', height: Math.abs(ySL - ye) + 'px' });
+  set('entryLine', { left: left + 'px', width: boxW + 'px', top: ye + 'px' });
 
-  const pct = (target) => ((target - p.entry) / p.entry * 100);
-  const tpEl = set('tpTag', { left: (left + 5) + 'px', top: yTP + 'px' });
-  tpEl.textContent = `TP ${fmtPrice(p.tp2)}  ${pct(p.tp2) >= 0 ? '+' : ''}${pct(p.tp2).toFixed(2)}%`;
-  const eEl = set('entryTag', { left: (left + 5) + 'px', top: yE + 'px' });
-  eEl.textContent = `${isLong ? 'LONG' : 'SHORT'} · ${fmtPrice(p.entry)}`;
-  const slEl = set('slTag', { left: (left + 5) + 'px', top: ySL + 'px' });
-  slEl.textContent = `SL ${fmtPrice(p.stop)}  ${pct(p.stop).toFixed(2)}%`;
+  // Labels: right-aligned next to the price axis and placed OUTSIDE the boxes
+  // (above/below their lines) so they never cover the green/red zones or candles.
+  const pct = (t) => ((t - at.entry) / at.entry * 100);
+  const rightCss = { left: 'auto', right: (psW + 4) + 'px', transform: 'none' };
+  const tpEl = set('tpTag', { ...rightCss, top: (yTP < ye ? yTP - 17 : yTP + 3) + 'px' });
+  tpEl.textContent = `TP ${fmtPrice(at.tp2)}  ${pct(at.tp2) >= 0 ? '+' : ''}${pct(at.tp2).toFixed(2)}%`;
+  const eEl = set('entryTag', { ...rightCss, top: (ye - 8) + 'px' });
+  eEl.textContent = `Entrada ${fmtPrice(at.entry)}`;
+  const slEl = set('slTag', { ...rightCss, top: (ySL > ye ? ySL + 3 : ySL - 17) + 'px' });
+  slEl.textContent = `SL ${fmtPrice(at.stop)}  ${pct(at.stop).toFixed(2)}%`;
 }
 
 function renderChart() {
@@ -191,10 +194,16 @@ function renderLegend() {
 /* ---------------------- UI renderers ---------------------- */
 function renderSignal() {
   const s = state.signal;
+  // When a trade is taken, show the FROZEN trade instead of the live suggestion.
+  if (state.activeTrade) { renderActiveTrade(); return; }
+
   const card = $('signalCard');
   const dir = $('signalDir');
   const fill = $('convictionFill');
 
+  $('activeTradeStatus').style.display = 'none';
+  $('signalReasons').style.display = '';
+  $('statScoreLabel').textContent = 'Confluencia';
   $('signalTime').textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
   card.className = 'signal-card ' + (s.direction === 'none' ? 'neutral' : s.direction);
@@ -210,7 +219,7 @@ function renderSignal() {
     $('statScore').textContent = fmtNum(s.absScore, 1);
   } else {
     dir.textContent = s.direction === 'long' ? 'LONG ▲' : 'SHORT ▼';
-    $('signalConviction').textContent = `${s.message} · ${s.profile}`;
+    $('signalConviction').textContent = `Sugerencia en vivo del bot · ${s.profile}`;
     const p = s.plan;
     $('lvlEntry').textContent = fmtPrice(p.entry);
     $('lvlSL').textContent = fmtPrice(p.stop);
@@ -225,19 +234,150 @@ function renderSignal() {
     .map((r) => `<div class="reason ${r.cls}"><span class="reason-icon">${r.icon}</span><span>${r.text}</span></div>`)
     .join('');
 
-  // log-trade button: enabled only when there is an actionable plan
+  // button: take (freeze) the current suggestion as a real trade
   const logBtn = $('logTradeBtn');
-  const key = s.plan ? `${state.tf}:${s.direction}:${Math.round(s.plan.entry)}` : null;
+  logBtn.classList.remove('danger', 'logged');
   if (s.plan) {
     logBtn.disabled = false;
-    const already = key === state.lastLoggedKey;
-    logBtn.classList.toggle('logged', already);
-    logBtn.querySelector('span').textContent = already ? '✓ Trade registrado' : 'Registrar este trade en el diario';
+    logBtn.querySelector('span').textContent = 'Tomar este trade (congelar)';
   } else {
     logBtn.disabled = true;
-    logBtn.classList.remove('logged');
-    logBtn.querySelector('span').textContent = 'Registrar este trade en el diario';
+    logBtn.querySelector('span').textContent = 'Esperando una señal válida…';
   }
+}
+
+/* ---------------------- active (frozen) trade ---------------------- */
+const ACTIVE_KEY = 'btcQuantActiveTrade_v1';
+
+function saveActiveTrade() {
+  try {
+    if (state.activeTrade) localStorage.setItem(ACTIVE_KEY, JSON.stringify(state.activeTrade));
+    else localStorage.removeItem(ACTIVE_KEY);
+  } catch (e) { /* ignore */ }
+}
+function loadActiveTrade() {
+  try { const raw = localStorage.getItem(ACTIVE_KEY); if (raw) state.activeTrade = JSON.parse(raw); } catch (e) {}
+}
+
+function takeTrade() {
+  const s = state.signal;
+  if (!s || !s.plan || state.activeTrade) return;
+  const jt = addTrade(s, state.tf);   // log frozen snapshot to the journal
+  state.activeTrade = {
+    id: jt ? jt.id : 'at-' + Date.now(),
+    dir: s.direction,
+    entry: s.plan.entry, stop: s.plan.stop, tp1: s.plan.tp1, tp2: s.plan.tp2,
+    riskPct: s.plan.riskPct, conviction: s.conviction,
+    tf: state.tf, time: Date.now(), mfe: 0, lastEvent: null,
+  };
+  saveActiveTrade();
+  renderSignal();
+  renderJournal();
+  updateTradeOverlay();
+}
+
+function closeActiveTrade() {
+  const at = state.activeTrade;
+  if (!at) return;
+  const t = getTrades().find((x) => x.id === at.id);
+  if (t && t.status === 'open') {
+    const price = state.livePrice || at.entry;
+    const isLong = at.dir === 'long';
+    const r = liveR(at, price);
+    let outcome = 'be';
+    if (isLong ? price >= at.tp2 : price <= at.tp2) outcome = 'win2';
+    else if (isLong ? price <= at.stop : price >= at.stop) outcome = 'loss';
+    else if (r >= 0.9) outcome = 'win1';
+    else if (r <= -0.9) outcome = 'loss';
+    else outcome = 'be';   // small +/- moves count as break-even (honest stats)
+    resolveTrade(at.id, outcome);
+  }
+  state.activeTrade = null;
+  saveActiveTrade();
+  renderJournal();
+  renderSignal();
+  updateTradeOverlay();
+}
+
+function renderActiveTrade() {
+  const at = state.activeTrade;
+  const card = $('signalCard');
+  const fill = $('convictionFill');
+
+  card.className = 'signal-card ' + at.dir;
+  $('signalTime').textContent = new Date(at.time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  $('signalDir').textContent = at.dir === 'long' ? 'LONG ▲' : 'SHORT ▼';
+  $('signalConviction').textContent = `TRADE ACTIVO · niveles congelados · ${at.tf.toUpperCase()}`;
+  fill.style.width = at.conviction + '%';
+  fill.style.background = at.dir === 'long' ? 'var(--long)' : 'var(--short)';
+
+  // FROZEN levels — these never move once the trade is taken
+  $('lvlEntry').textContent = fmtPrice(at.entry);
+  $('lvlSL').textContent = fmtPrice(at.stop);
+  $('lvlTP1').textContent = fmtPrice(at.tp1);
+  $('lvlTP2').textContent = fmtPrice(at.tp2);
+  $('statRR').textContent = '2 : 1';
+  $('statRisk').textContent = fmtNum(at.riskPct, 2) + '%';
+  $('statScoreLabel').textContent = 'Convicción';
+  $('statScore').textContent = at.conviction + '%';
+
+  $('signalReasons').style.display = 'none';
+  $('activeTradeStatus').style.display = 'block';
+  updateActiveTradeStatus();
+
+  const logBtn = $('logTradeBtn');
+  logBtn.disabled = false;
+  logBtn.classList.remove('logged');
+  logBtn.classList.add('danger');
+  logBtn.querySelector('span').textContent = 'Cerrar trade';
+}
+
+/** Live P&L tracker for the active trade. Updates the status block ONLY;
+ *  the frozen entry/SL/TP levels above are never touched. */
+function updateActiveTradeStatus() {
+  const at = state.activeTrade;
+  if (!at) return;
+  const price = state.livePrice || at.entry;
+  const isLong = at.dir === 'long';
+  const r = liveR(at, price);
+  const movePct = (isLong ? price - at.entry : at.entry - price) / at.entry * 100;
+  at.mfe = Math.max(at.mfe || 0, r);
+
+  const hitTP2 = isLong ? price >= at.tp2 : price <= at.tp2;
+  const hitTP1 = isLong ? price >= at.tp1 : price <= at.tp1;
+  const hitSL = isLong ? price <= at.stop : price >= at.stop;
+
+  let status, cls, icon, eventKey = null;
+  if (at.lastEvent === 'tp2' || hitTP2) { status = 'TP2 alcanzado · objetivo cumplido (+2R)'; cls = 'pos'; icon = '🎯'; eventKey = 'tp2'; }
+  else if (at.lastEvent === 'sl' || hitSL) { status = 'Stop Loss alcanzado (-1R)'; cls = 'neg'; icon = '🛑'; eventKey = 'sl'; }
+  else if (hitTP1) { status = 'TP1 alcanzado (+1R) · puedes asegurar parte'; cls = 'pos'; icon = '✅'; }
+  else if (at.mfe >= 0.4 && r <= 0.12 && r >= -0.12) { status = 'Se dio la vuelta a BREAK-EVEN'; cls = 'warn'; icon = '⚠️'; eventKey = 'be'; }
+  else if (r > 0.05) { status = 'En ganancia'; cls = 'pos'; icon = '📈'; }
+  else if (r < -0.05) { status = 'En pérdida'; cls = 'neg'; icon = '📉'; }
+  else { status = 'En break-even'; cls = 'neutral'; icon = '➖'; }
+
+  // fire a one-time alert + auto-resolve journal on terminal/important events
+  if (eventKey && at.lastEvent !== eventKey) {
+    at.lastEvent = eventKey;
+    if (eventKey === 'tp2') { resolveTrade(at.id, 'win2'); renderJournal(); playAlertSound('long'); }
+    else if (eventKey === 'sl') { resolveTrade(at.id, 'loss'); renderJournal(); playAlertSound('short'); }
+    else if (eventKey === 'be') { playAlertSound('short'); }
+    notifyText(`Trade ${at.dir.toUpperCase()} · ${at.tf.toUpperCase()}`, status);
+    saveActiveTrade();
+  }
+
+  const rTxt = (r >= 0 ? '+' : '') + r.toFixed(2) + 'R';
+  const mTxt = (movePct >= 0 ? '+' : '') + movePct.toFixed(2) + '%';
+  const el = $('activeTradeStatus');
+  el.className = 'active-status ' + cls;
+  el.innerHTML = `
+    <div class="as-head"><span class="as-icon">${icon}</span><span class="as-status">${status}</span></div>
+    <div class="as-metrics">
+      <div><span>Precio actual</span><b>${fmtPrice(price)}</b></div>
+      <div><span>P&L</span><b class="${r >= 0 ? 'pos' : 'neg'}">${rTxt}</b></div>
+      <div><span>Movimiento</span><b class="${movePct >= 0 ? 'pos' : 'neg'}">${mTxt}</b></div>
+      <div><span>Máx. a favor</span><b>${(at.mfe >= 0 ? '+' : '') + at.mfe.toFixed(2)}R</b></div>
+    </div>`;
 }
 
 const IND_DEFS = [
@@ -479,6 +619,7 @@ function applyLiveKline(k) {
   $('livePrice').textContent = fmtPrice(c.close);
   $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
   refreshJournalLive();
+  if (state.activeTrade) updateActiveTradeStatus();   // smooth live P&L (levels stay frozen)
   state._needRecompute = true;             // indicators/signal refresh on throttle
 }
 
@@ -498,6 +639,7 @@ function startRestPolling() {
       $('livePrice').textContent = fmtPrice(last.close);
       $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
       refreshJournalLive();
+      if (state.activeTrade) updateActiveTradeStatus();
       state._needRecompute = true;
       if (!wsAlive) setStatus('En vivo · sondeo (cada 3s)', 'live');
     } catch (e) { /* transient */ }
@@ -520,6 +662,7 @@ function startRecomputeLoop() {
     renderIndicators();
     renderPatterns();
     maybeAlert(state.signal);
+    if (state.activeTrade) saveActiveTrade();
   }, 1200);
 }
 function stopRecomputeLoop() {
@@ -549,6 +692,7 @@ function evolveSyntheticLast() {
   state.livePrice = last.close;
   $('livePrice').textContent = fmtPrice(last.close);
   refreshJournalLive();
+  if (state.activeTrade) updateActiveTradeStatus();
   state._needRecompute = true;
 }
 
@@ -566,6 +710,8 @@ function updatePriceHeader(price, changePct) {
 
 /* ---------------------- alerts ---------------------- */
 function maybeAlert(signal) {
+  // While a trade is active, we don't alert on new suggestions (you're already in).
+  if (state.activeTrade) return;
   const key = signal.direction === 'none' ? `${state.tf}:none` : `${state.tf}:${signal.direction}`;
   if (key === state.lastAlertKey) return;        // same state, no spam
   const prev = state.lastAlertKey;
@@ -691,14 +837,11 @@ function bindControls() {
     if (e.target.checked) { primeAudio(); requestNotifyPermission(); }
   });
 
-  // log current signal as a trade
+  // take (freeze) the current signal as a trade, or close the active one
   $('logTradeBtn').addEventListener('click', () => {
-    const s = state.signal;
-    if (!s || !s.plan) return;
-    addTrade(s, state.tf);
-    state.lastLoggedKey = `${state.tf}:${s.direction}:${Math.round(s.plan.entry)}`;
-    renderSignal();
-    renderJournal();
+    primeAudio();
+    if (state.activeTrade) closeActiveTrade();
+    else takeTrade();
   });
 
   // journal actions (event delegation)
@@ -744,6 +887,7 @@ function boot() {
   if (!LWC) { setStatus('No se pudo cargar el motor de gráficos', 'error'); return; }
   initChart();
   bindControls();
+  loadActiveTrade();        // restore a frozen trade across reloads
   renderJournal();
   requestNotifyPermission();
   analyze();

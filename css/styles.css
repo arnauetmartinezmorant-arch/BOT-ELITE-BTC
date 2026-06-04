@@ -240,6 +240,24 @@ body {
 .log-trade-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.4); }
 .log-trade-btn:disabled { opacity: 0.4; cursor: not-allowed; background: var(--bg-2); color: var(--text-3); }
 .log-trade-btn.logged { background: linear-gradient(180deg, var(--long), #0fa968); }
+.log-trade-btn.danger { background: linear-gradient(180deg, var(--short), #b91c1c); }
+.log-trade-btn.danger:hover:not(:disabled) { box-shadow: 0 6px 18px rgba(234,57,67,0.4); }
+
+/* ===================== ACTIVE TRADE STATUS ===================== */
+.active-status { margin-bottom: 14px; padding: 12px; border-radius: var(--radius-sm); background: var(--bg-1); border: 1px solid var(--border); border-left: 3px solid var(--text-3); }
+.active-status.pos { border-left-color: var(--long); background: linear-gradient(90deg, var(--long-dim), var(--bg-1)); }
+.active-status.neg { border-left-color: var(--short); background: linear-gradient(90deg, var(--short-dim), var(--bg-1)); }
+.active-status.warn { border-left-color: var(--warn); background: linear-gradient(90deg, rgba(251,191,36,0.14), var(--bg-1)); }
+.active-status.neutral { border-left-color: var(--text-3); }
+.as-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.as-icon { font-size: 16px; }
+.as-status { font-size: 13px; font-weight: 700; }
+.as-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.as-metrics > div { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.as-metrics span { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.as-metrics b { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text-0); }
+.as-metrics b.pos { color: var(--long); }
+.as-metrics b.neg { color: var(--short); }
 
 /* ===================== JOURNAL ===================== */
 .mini-btn { background: var(--bg-1); border: 1px solid var(--border-strong); color: var(--text-2); font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: 0.15s; font-family: inherit; }

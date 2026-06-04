@@ -142,14 +142,17 @@
           <div class="signal-stats">
             <div class="stat"><span class="stat-label">Riesgo/Beneficio</span><span id="statRR" class="stat-val">—</span></div>
             <div class="stat"><span class="stat-label">Riesgo %</span><span id="statRisk" class="stat-val">—</span></div>
-            <div class="stat"><span class="stat-label">Confluencia</span><span id="statScore" class="stat-val">—</span></div>
+            <div class="stat"><span class="stat-label" id="statScoreLabel">Confluencia</span><span id="statScore" class="stat-val">—</span></div>
           </div>
+
+          <!-- live tracking shown ONLY while a trade is active; levels above stay frozen -->
+          <div id="activeTradeStatus" class="active-status" style="display:none;"></div>
 
           <div id="signalReasons" class="signal-reasons"></div>
 
           <button id="logTradeBtn" class="log-trade-btn" disabled>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            <span>Registrar este trade en el diario</span>
+            <span>Tomar este trade (congelar)</span>
           </button>
         </div>
         <p class="disclaimer">⚠️ Esto NO es asesoramiento financiero. El bot identifica oportunidades de alta probabilidad, no certezas. Opera siempre con gestión de riesgo.</p>
