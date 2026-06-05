@@ -390,3 +390,65 @@ body {
   .refresh-btn { margin-left: 0; width: 100%; justify-content: center; }
   .chart-container { height: 340px; }
 }
+
+
+
+/* ============================================================
+   THEMES — applied via a body class. The classic look is the
+   default (:root). These only override variables + a few
+   hard-coded backgrounds, so nothing else needs to change.
+   ============================================================ */
+
+/* ---------- 🛸 FUTURISTA (neón / holográfico) ---------- */
+body.theme-futuristic {
+  --bg-0: #04030f; --bg-1: #0a0a18; --bg-2: #10102408;
+  --panel: rgba(120,150,255,0.06); --panel-solid: #0c0c1c;
+  --border: rgba(140,170,255,0.18); --border-strong: rgba(140,170,255,0.34);
+  --text-0: #eaf2ff; --text-1: #c4d3f5; --text-2: #8ea0c9; --text-3: #62709a;
+  --accent: #22e3ff; --accent-2: #ff3df0;
+  --long: #00ffa3; --long-dim: rgba(0,255,163,0.14);
+  --short: #ff2d74; --short-dim: rgba(255,45,116,0.14);
+  --glow-long: 0 0 26px rgba(0,255,163,0.5); --glow-short: 0 0 26px rgba(255,45,116,0.5);
+  background:
+    radial-gradient(900px 520px at 85% -10%, rgba(255,61,240,0.18), transparent 60%),
+    radial-gradient(900px 600px at 8% 0%, rgba(34,227,255,0.16), transparent 55%),
+    radial-gradient(700px 500px at 50% 115%, rgba(139,92,246,0.20), transparent 60%),
+    #04030f;
+}
+body.theme-futuristic .topbar { background: linear-gradient(180deg, rgba(20,22,48,0.85), rgba(8,8,24,0.7)); }
+body.theme-futuristic .panel,
+body.theme-futuristic .controls,
+body.theme-futuristic .topbar { backdrop-filter: blur(12px); box-shadow: 0 0 30px rgba(34,227,255,0.05); }
+body.theme-futuristic .tf-btn.active { background: linear-gradient(135deg, var(--accent), #8b5cf6); color: #04030f; box-shadow: 0 0 18px rgba(34,227,255,0.5); }
+body.theme-futuristic #riskSelector .tf-btn.active,
+body.theme-futuristic #themeSelector .tf-btn.active { background: linear-gradient(135deg, var(--accent-2), #8b5cf6); color: #fff; box-shadow: 0 0 18px rgba(255,61,240,0.5); }
+body.theme-futuristic .trade-box.tp { background: rgba(0,255,163,0.14); border-color: rgba(0,255,163,0.55); }
+body.theme-futuristic .trade-box.sl { background: rgba(255,45,116,0.14); border-color: rgba(255,45,116,0.55); }
+body.theme-futuristic .trade-tag.tp { background: rgba(0,255,163,0.92); color: #021a12; }
+body.theme-futuristic .trade-tag.sl { background: rgba(255,45,116,0.92); color: #fff; }
+
+/* ---------- 🥇 GOLD (oro de lujo) ---------- */
+body.theme-gold {
+  --bg-0: #0b0a07; --bg-1: #100e08; --bg-2: #15130c;
+  --panel: linear-gradient(180deg, rgba(21,19,12,0.92), rgba(16,14,8,0.92));
+  --panel-solid: #15130c;
+  --border: rgba(212,175,55,0.18); --border-strong: rgba(212,175,55,0.38);
+  --text-0: #f3ead2; --text-1: #ddd0ad; --text-2: #bcae8e; --text-3: #897c5e;
+  --accent: #d4af37; --accent-2: #b08d57;
+  --long: #4cc38a; --long-dim: rgba(76,195,138,0.14);
+  --short: #e0573e; --short-dim: rgba(224,87,62,0.14);
+  --glow-long: 0 0 22px rgba(76,195,138,0.30); --glow-short: 0 0 22px rgba(224,87,62,0.30);
+  background:
+    radial-gradient(900px 480px at 85% -10%, rgba(212,175,55,0.16), transparent 60%),
+    radial-gradient(800px 600px at 8% 0%, rgba(176,141,87,0.10), transparent 55%),
+    #0b0a07;
+}
+body.theme-gold .topbar { background: linear-gradient(180deg, rgba(24,21,12,0.95), rgba(14,12,7,0.85)); }
+body.theme-gold .tf-btn.active { background: linear-gradient(135deg, #f5d27a, #b08d57); color: #1a1405; box-shadow: 0 4px 14px rgba(212,175,55,0.35); }
+body.theme-gold #riskSelector .tf-btn.active,
+body.theme-gold #themeSelector .tf-btn.active { background: linear-gradient(135deg, #f5d27a, #b08d57); color: #1a1405; box-shadow: 0 4px 14px rgba(212,175,55,0.35); }
+body.theme-gold .trade-box.tp { background: rgba(76,195,138,0.13); border-color: rgba(76,195,138,0.5); }
+body.theme-gold .trade-box.sl { background: rgba(224,87,62,0.13); border-color: rgba(224,87,62,0.5); }
+body.theme-gold .trade-tag.tp { background: rgba(76,195,138,0.92); color: #03160d; }
+body.theme-gold .trade-tag.sl { background: rgba(224,87,62,0.92); color: #fff; }
+body.theme-gold .trade-tag.entry { background: rgba(245,210,122,0.95); color: #1a1405; }

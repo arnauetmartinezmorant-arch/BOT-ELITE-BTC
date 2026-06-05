@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview · Tema NEÓN (colores cambiantes)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* colores neón animados (interpolan suavemente) */
+  @property --neon  { syntax:'<color>'; inherits:true; initial-value:#00e5ff; }
+  @property --neon2 { syntax:'<color>'; inherits:true; initial-value:#ff2bd6; }
+  @keyframes cyc {
+    0%   { --neon:#00e5ff; --neon2:#ff2bd6; }
+    20%  { --neon:#7c4dff; --neon2:#00ffa3; }
+    40%  { --neon:#ff2bd6; --neon2:#00e5ff; }
+    60%  { --neon:#00ffa3; --neon2:#7c4dff; }
+    80%  { --neon:#ffd23f; --neon2:#ff5db1; }
+    100% { --neon:#00e5ff; --neon2:#ff2bd6; }
+  }
+  :root{ --tx:#eaf2ff; --tx2:#9fb0d6; --tx3:#6c7aa3; --up:var(--neon); --down:var(--neon2); --mono:'Rajdhani',sans-serif; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Rajdhani',sans-serif;color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;
+    animation:cyc 11s linear infinite;position:relative;overflow-x:hidden;
+    background:
+      radial-gradient(900px 520px at 85% -10%, color-mix(in srgb, var(--neon2) 22%, transparent), transparent 60%),
+      radial-gradient(900px 600px at 8% 0%, color-mix(in srgb, var(--neon) 20%, transparent), transparent 55%),
+      radial-gradient(700px 520px at 50% 115%, color-mix(in srgb, var(--neon) 16%, transparent), transparent 60%),
+      #04030d;
+  }
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(color-mix(in srgb,var(--neon) 18%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--neon) 18%,transparent) 1px,transparent 1px);background-size:40px 40px;opacity:.18;mask-image:radial-gradient(circle at 50% 25%,#000,transparent 80%)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px;position:relative;z-index:1}
+  .ribbon{font-family:'Orbitron';font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;color:var(--neon);text-shadow:0 0 14px var(--neon)}
+  .glass{background:color-mix(in srgb,var(--neon) 5%, rgba(8,8,22,.6));border:1px solid color-mix(in srgb,var(--neon) 38%, transparent);border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 0 28px color-mix(in srgb,var(--neon) 22%, transparent),inset 0 1px 0 rgba(255,255,255,.05)}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .mark{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-family:'Orbitron';font-weight:900;font-size:20px;color:#04030d;background:linear-gradient(135deg,var(--neon),var(--neon2));box-shadow:0 0 22px var(--neon)}
+  .brand h1{font-family:'Orbitron';font-size:17px;font-weight:700;background:linear-gradient(90deg,var(--neon),var(--neon2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand small{font-size:12px;color:var(--tx2);letter-spacing:1px}
+  .price .v{font-family:'Orbitron';font-size:26px;font-weight:700;color:#fff;text-shadow:0 0 18px var(--neon);text-align:right}
+  .price .c{font-size:14px;color:var(--neon);text-align:right;letter-spacing:1px;text-shadow:0 0 10px var(--neon)}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:1px;color:var(--neon);border:1px solid color-mix(in srgb,var(--neon) 45%, transparent);padding:6px 12px;border-radius:20px;box-shadow:0 0 16px color-mix(in srgb,var(--neon) 30%, transparent)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px var(--neon);animation:pulse 1.5s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .ctrl{display:flex;gap:24px;align-items:flex-end;margin-top:14px;padding:14px 18px;flex-wrap:wrap}
+  .lab{font-family:'Orbitron';font-size:10px;letter-spacing:2px;color:var(--tx2);margin-bottom:8px;text-transform:uppercase}
+  .seg{display:inline-flex;gap:5px;padding:4px;border:1px solid color-mix(in srgb,var(--neon) 22%, transparent);border-radius:10px;background:rgba(5,8,25,.5)}
+  .seg button{border:0;background:transparent;color:var(--tx2);font:600 13px Rajdhani;letter-spacing:1px;padding:8px 14px;border-radius:7px;cursor:pointer}
+  .seg button.on{color:#04030d;background:linear-gradient(135deg,var(--neon),var(--neon2));box-shadow:0 0 18px var(--neon)}
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:14px;margin-top:14px}
+  .card{padding:16px}
+  .card h2{font-family:'Orbitron';font-size:13px;letter-spacing:1px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;color:#dCe9ff}
+  .tag{font-size:12px;letter-spacing:1px;color:var(--neon);border:1px solid color-mix(in srgb,var(--neon) 35%, transparent);padding:2px 9px;border-radius:6px}
+  .legend{font-size:12px;color:var(--tx2);display:flex;gap:14px;letter-spacing:.5px}
+  svg{display:block;width:100%;height:330px}
+  #chart .up{fill:var(--neon);stroke:var(--neon)}
+  #chart .down{fill:var(--neon2);stroke:var(--neon2)}
+  #chart .ema1{fill:none;stroke:var(--neon);stroke-width:1.6}
+  #chart .ema2{fill:none;stroke:var(--neon2);stroke-width:1.6}
+  #chart .boxtp{fill:color-mix(in srgb,var(--neon) 14%,transparent);stroke:color-mix(in srgb,var(--neon) 60%,transparent)}
+  #chart .boxsl{fill:color-mix(in srgb,var(--neon2) 14%,transparent);stroke:color-mix(in srgb,var(--neon2) 60%,transparent)}
+  #chart .eline{stroke:#fff;stroke-dasharray:4 3;opacity:.8}
+  #chart .ttp{fill:var(--neon)} #chart .tsl{fill:var(--neon2)} #chart .ten{fill:#fff}
+  .sig{border:1px solid color-mix(in srgb,var(--neon) 45%, transparent);border-radius:12px;padding:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--neon) 12%,transparent),transparent);box-shadow:0 0 30px color-mix(in srgb,var(--neon) 26%, transparent)}
+  .sig .dir{font-family:'Orbitron';font-size:30px;font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 0 22px var(--neon)}
+  .sig .sub{font-size:13px;color:var(--tx2);margin-bottom:12px;letter-spacing:.5px}
+  .bar{height:7px;background:rgba(5,8,25,.6);border:1px solid color-mix(in srgb,var(--neon) 22%,transparent);border-radius:6px;overflow:hidden;margin:10px 0 14px}
+  .bar i{display:block;height:100%;width:78%;background:linear-gradient(90deg,var(--neon),var(--neon2));box-shadow:0 0 12px var(--neon)}
+  .lv{display:flex;justify-content:space-between;padding:10px 12px;background:rgba(5,8,25,.5);border:1px solid color-mix(in srgb,var(--neon) 16%,transparent);border-radius:8px;margin-bottom:6px}
+  .lv span{font-size:13px;color:var(--tx2);letter-spacing:.5px} .lv b{font-family:'Orbitron';font-size:14px;color:#fff}
+  .lv.sl b{color:var(--neon2)} .lv.tp b{color:var(--neon)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .st{background:rgba(5,8,25,.5);border:1px solid color-mix(in srgb,var(--neon) 16%,transparent);border-radius:8px;padding:10px;text-align:center}
+  .st small{display:block;font-size:9px;color:var(--tx2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+  .st b{font-family:'Orbitron';font-size:14px;color:#fff}
+  .inds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .ind{background:rgba(5,8,25,.45);border:1px solid color-mix(in srgb,var(--neon) 16%,transparent);border-radius:10px;padding:12px}
+  .ind .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .ind .n{font-size:12px;color:var(--tx2);letter-spacing:1px;font-weight:600}
+  .ind .s{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.5px;color:#04030d;background:var(--neon)}
+  .ind .v{font-family:'Orbitron';font-size:17px;font-weight:700;color:#fff}
+  .foot{margin-top:16px;font-size:12px;color:var(--tx2);text-align:center;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ribbon">// Vista previa — Tema NEÓN · colores cambiantes</div>
+  <div class="top glass">
+    <div class="brand"><div class="mark">₿</div><div><h1>BTC QUANT TERMINAL</h1><small>NEON MARKET ENGINE · MULTI-TF</small></div></div>
+    <div class="price"><div class="v">$63,627.19</div><div class="c">▲ +1.24% · 24H</div></div>
+    <div class="pill"><span class="dot"></span> LIVE · STREAMING</div>
+  </div>
+  <div class="ctrl glass">
+    <div><div class="lab">Temporalidad</div><div class="seg"><button>15m</button><button class="on">1H</button><button>4H</button><button>1D</button><button>1W</button></div></div>
+    <div><div class="lab">Modo</div><div class="seg"><button class="on">Conservador</button><button>★ Premium</button></div></div>
+  </div>
+  <div class="grid">
+    <div class="card glass">
+      <h2>GRÁFICO DE VELAS <span class="tag">1H</span><span class="legend"><span style="color:var(--neon)">EMA21</span><span style="color:var(--neon2)">EMA50</span></span></h2>
+      <svg id="chart" viewBox="0 0 860 330" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="card glass">
+      <h2>SEÑAL DEL BOT <span class="tag">14:32</span></h2>
+      <div class="sig">
+        <div class="dir">LONG ▲</div>
+        <div class="sub">Confluencia alcista · Conservador · 7/9 indicadores</div>
+        <div class="bar"><i></i></div>
+        <div class="lv"><span>Entrada</span><b>$63,627.19</b></div>
+        <div class="lv sl"><span>Stop Loss</span><b>$62,998.49</b></div>
+        <div class="lv tp"><span>TP 1</span><b>$64,255.89</b></div>
+        <div class="lv tp"><span>TP 2 · 2:1</span><b>$64,884.59</b></div>
+        <div class="stats"><div class="st"><small>R/B</small><b>2:1</b></div><div class="st"><small>Riesgo</small><b>0.99%</b></div><div class="st"><small>Conv.</small><b>74%</b></div></div>
+      </div>
+      <div class="inds">
+        <div class="ind"><div class="h"><span class="n">RSI</span><span class="s">ALCISTA</span></div><div class="v">58.4</div></div>
+        <div class="ind"><div class="h"><span class="n">MACD</span><span class="s">ALCISTA</span></div><div class="v">+42</div></div>
+        <div class="ind"><div class="h"><span class="n">ADX</span><span class="s">FUERTE</span></div><div class="v">28</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">// Maqueta visual · los colores cian/magenta/violeta/verde cambian solos en bucle</div>
+</div>
+<script>
+(function(){
+  const svg=document.getElementById('chart');const ns='http://www.w3.org/2000/svg';
+  const defs=document.createElementNS(ns,'defs');
+  defs.innerHTML='<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  svg.appendChild(defs);
+  const W=860,H=330,pad=14,N=48;
+  let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  let p=62200;const ks=[];
+  for(let i=0;i<N;i++){const drift=i<N-7?0.0045:-0.007;const ret=drift+(rnd()-0.5)*0.011;const o=p,c=Math.max(1,o*(1+ret));ks.push({o,c,h:Math.max(o,c)*(1+rnd()*0.005),l:Math.min(o,c)*(1-rnd()*0.005)});p=c;}
+  const lo=Math.min(...ks.map(k=>k.l)),hi=Math.max(...ks.map(k=>k.h));
+  const plotW=W*0.62,cw=plotW/N;const yF=v=>pad+(hi-v)/(hi-lo)*(H-2*pad);
+  const closes=ks.map(k=>k.c);const ma=per=>closes.map((_,i)=>{if(i<per-1)return null;let s=0;for(let j=i-per+1;j<=i;j++)s+=closes[j];return s/per;});
+  const drawMa=(arr,cls)=>{let d='';arr.forEach((v,i)=>{if(v==null)return;const x=i*cw+cw/2;d+=(d?'L':'M')+x+' '+yF(v);});const pl=document.createElementNS(ns,'path');pl.setAttribute('d',d);pl.setAttribute('class',cls);pl.setAttribute('filter','url(#g)');svg.appendChild(pl);};
+  ks.forEach((k,i)=>{const x=i*cw+cw/2;const cls=k.c>=k.o?'up':'down';
+    const w=document.createElementNS(ns,'line');w.setAttribute('x1',x);w.setAttribute('x2',x);w.setAttribute('y1',yF(k.h));w.setAttribute('y2',yF(k.l));w.setAttribute('class',cls);w.setAttribute('filter','url(#g)');svg.appendChild(w);
+    const r=document.createElementNS(ns,'rect');const bt=yF(Math.max(k.o,k.c)),bb=yF(Math.min(k.o,k.c));r.setAttribute('x',x-cw*0.32);r.setAttribute('width',cw*0.64);r.setAttribute('y',bt);r.setAttribute('height',Math.max(1,bb-bt));r.setAttribute('class',cls);r.setAttribute('filter','url(#g)');svg.appendChild(r);});
+  drawMa(ma(21),'ema1');drawMa(ma(50),'ema2');
+  const last=ks[N-1].c,entry=last,sl=last*0.99,tp=last*1.018;
+  const bx=plotW+6,bw=W-bx-92;
+  const box=(yA,yB,cls)=>{const r=document.createElementNS(ns,'rect');r.setAttribute('x',bx);r.setAttribute('width',bw);r.setAttribute('y',Math.min(yA,yB));r.setAttribute('height',Math.abs(yB-yA));r.setAttribute('class',cls);r.setAttribute('rx',2);svg.appendChild(r);};
+  box(yF(entry),yF(tp),'boxtp');box(yF(entry),yF(sl),'boxsl');
+  const ln=document.createElementNS(ns,'line');ln.setAttribute('x1',bx);ln.setAttribute('x2',bx+bw);ln.setAttribute('y1',yF(entry));ln.setAttribute('y2',yF(entry));ln.setAttribute('class','eline');svg.appendChild(ln);
+  const tag=(y,txt,cls)=>{const t=document.createElementNS(ns,'text');t.textContent=txt;t.setAttribute('x',W-6);t.setAttribute('y',y+3);t.setAttribute('text-anchor','end');t.setAttribute('font-family',"'Orbitron'");t.setAttribute('font-size','9.5');t.setAttribute('font-weight','700');t.setAttribute('class',cls);svg.appendChild(t);};
+  tag(yF(tp)-6,'TP $64,884','ttp');tag(yF(entry)-6,'ENTRADA $63,627','ten');tag(yF(sl)+12,'SL $62,998','tsl');
+})();
+</script>
+</body>
+</html>

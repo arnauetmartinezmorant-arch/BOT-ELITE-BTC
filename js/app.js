@@ -188,13 +188,40 @@ function renderChartLive() {
   renderLegend();
 }
 
+/* ---------------------- themes ---------------------- */
+const THEMES = {
+  futuristic: { up: '#00ffa3', down: '#ff2d74', ema21: '#22e3ff', ema50: '#ff3df0', ema200: '#c4d3f5' },
+  gold:       { up: '#4cc38a', down: '#e0573e', ema21: '#d4af37', ema50: '#b08d57', ema200: '#f3ead2' },
+};
+let themeColors = THEMES.futuristic;
+
+function applyTheme(name) {
+  if (!THEMES[name]) name = 'futuristic';
+  themeColors = THEMES[name];
+  document.body.classList.remove('theme-gold', 'theme-futuristic');
+  document.body.classList.add('theme-' + name);
+  try { localStorage.setItem('btcQuantTheme', name); } catch (e) {}
+  document.querySelectorAll('#themeSelector .tf-btn').forEach((b) => b.classList.toggle('active', b.dataset.theme === name));
+  if (candleSeries) {
+    candleSeries.applyOptions({
+      upColor: themeColors.up, downColor: themeColors.down,
+      borderUpColor: themeColors.up, borderDownColor: themeColors.down,
+      wickUpColor: themeColors.up, wickDownColor: themeColors.down,
+    });
+    ema21Series.applyOptions({ color: themeColors.ema21 });
+    ema50Series.applyOptions({ color: themeColors.ema50 });
+    ema200Series.applyOptions({ color: themeColors.ema200 });
+  }
+  if (state.ind) renderLegend();
+}
+
 function renderLegend() {
   if (!state.ind) return;
   const L = state.ind.last;
   $('chartLegend').innerHTML = `
-    <span style="color:#f7931a">EMA21 <b>${fmtPrice(L.ema21)}</b></span>
-    <span style="color:#6366f1">EMA50 <b>${fmtPrice(L.ema50)}</b></span>
-    <span style="color:#e2e8f0">EMA200 <b>${fmtPrice(L.ema200)}</b></span>`;
+    <span style="color:${themeColors.ema21}">EMA21 <b>${fmtPrice(L.ema21)}</b></span>
+    <span style="color:${themeColors.ema50}">EMA50 <b>${fmtPrice(L.ema50)}</b></span>
+    <span style="color:${themeColors.ema200}">EMA200 <b>${fmtPrice(L.ema200)}</b></span>`;
 }
 
 /* ---------------------- UI renderers ---------------------- */
@@ -885,6 +912,13 @@ function bindControls() {
   // prime audio + notifications on first interaction anywhere
   window.addEventListener('pointerdown', primeAudio, { once: true });
 
+  // theme selector (Gold / Futurista)
+  $('themeSelector').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tf-btn');
+    if (!btn) return;
+    applyTheme(btn.dataset.theme);
+  });
+
   // fullscreen for just the chart panel
   $('fullscreenBtn').addEventListener('click', () => {
     const el = document.querySelector('.chart-panel');
@@ -927,6 +961,9 @@ function setupAutoRefresh() {
 function boot() {
   if (!LWC) { setStatus('No se pudo cargar el motor de gráficos', 'error'); return; }
   initChart();
+  let savedTheme = 'futuristic';
+  try { savedTheme = localStorage.getItem('btcQuantTheme') || 'futuristic'; } catch (e) {}
+  applyTheme(savedTheme);
   bindControls();
   loadActiveTrade();        // restore a frozen trade across reloads
   renderJournal();
