@@ -5,7 +5,7 @@ import { generateSyntheticCandles } from '../js/data.js';
 import { computeIndicators } from '../js/indicators.js';
 import { generateSignal } from '../js/signals.js';
 import { formatSignal, formatExit, formatReversal } from './format.js';
-import { evaluateTrade } from './index.js';
+import { evaluateTrade, stepTradeState } from './index.js';
 
 const modes = ['conservador', 'premium'];
 let shown = 0;
@@ -58,6 +58,34 @@ check('Cursor evita alertas duplicadas', step.events.length === 0 && step2.event
 const allMsgs = ['tp1', 'tp2', 'sl', 'be'].every((type) => formatExit('premium', '1h', LONG, { type, price: 110 }).includes('BTC/USDT'));
 check('formatExit genera mensaje para tp1/tp2/sl/be', allMsgs);
 check('formatReversal genera mensaje', formatReversal('conservador', '4h', LONG, 'short').includes('invalidada'));
+
+/* ── Regression: re-notify a FRESH signal in the SAME direction after close ──
+   Bug: after a LONG closed (e.g. via SL), state kept dir='long', so the next
+   LONG was silently de-duplicated and never alerted. */
+const longSig = { direction: 'long', conviction: 80, plan: { entry: 100, stop: 90, tp1: 110, tp2: 120 } };
+const noneSig = { direction: 'none', conviction: 0, plan: null };
+const cc = (time, low, high) => ({ time, low, high, open: low, close: high, volume: 1 });
+
+// Cycle 1: fresh LONG with no prior state → must emit an entry.
+let s1 = stepTradeState(undefined, longSig, [cc(10, 99, 101)], 10);
+check('Ciclo 1: nueva señal LONG → avisa entrada', s1.actions.some((a) => a.kind === 'entry') && s1.st.trade);
+
+// Cycle 2: price hits the stop loss → must emit an SL exit and clear the trade.
+let s2 = stepTradeState(s1.st, noneSig, [cc(20, 88, 95)], 20);
+check('Ciclo 2: toca Stop Loss → avisa cierre y libera la operación',
+  s2.actions.some((a) => a.kind === 'exit' && a.ev.type === 'sl') && !s2.st.trade && s2.st.dir === 'none');
+
+// Cycle 3: a NEW long appears later → must alert AGAIN (this was the bug).
+let s3 = stepTradeState(s2.st, longSig, [cc(30, 99, 101)], 30);
+check('Ciclo 3: nuevo LONG tras el cierre → VUELVE a avisar (bug corregido)',
+  s3.actions.some((a) => a.kind === 'entry') && s3.st.trade);
+
+// Anti-whipsaw: if the SL is hit AND the signal is LONG again in the SAME
+// cycle, it must close but NOT immediately re-open in that same cycle.
+let sWhip = stepTradeState(s1.st, longSig, [cc(20, 88, 95)], 20);
+check('No reentra en el MISMO ciclo del cierre (anti-whipsaw)',
+  sWhip.actions.some((a) => a.kind === 'exit' && a.ev.type === 'sl') &&
+  !sWhip.actions.some((a) => a.kind === 'entry'));
 
 console.log('\n──── Ejemplo de mensajes de cierre ────');
 console.log(formatExit('premium', '1h', LONG, { type: 'tp2', price: 120 }));

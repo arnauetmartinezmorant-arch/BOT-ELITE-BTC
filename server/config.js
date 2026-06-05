@@ -24,6 +24,12 @@ export const CONFIG = {
   // Don't re-send the same direction for the same mode+tf within this window.
   cooldownMs: Math.max(1, Number(process.env.COOLDOWN_MIN || 30)) * 60000,
 
+  // "Estoy vivo" message so you know the bot is running even with no signals.
+  //   HEARTBEAT_HOURS=0   → disabled
+  //   HEARTBEAT_HOURS=24  → at most one heartbeat per 24h (default)
+  //   HEARTBEAT_HOURS=-1  → every run (handy for the manual "Run workflow" test)
+  heartbeatHours: process.env.HEARTBEAT_HOURS != null ? Number(process.env.HEARTBEAT_HOURS) : 24,
+
   // When true, prints messages to the console instead of calling Telegram.
   dryRun: process.env.DRY_RUN === '1' || process.env.DRY_RUN === 'true',
 };
