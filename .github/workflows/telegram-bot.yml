@@ -1,0 +1,45 @@
+name: BTC Quant · Bot de Telegram (gratis)
+
+# Se ejecuta solo cada 30 minutos, y también puedes lanzarlo a mano.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+# Evita que se solapen dos ejecuciones
+concurrency:
+  group: btc-quant-telegram
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar el repo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Guarda/restaura el estado (qué señal se mandó por última vez)
+      # para no repetir alertas entre ejecuciones.
+      - name: Restaurar estado anterior
+        uses: actions/cache@v4
+        with:
+          path: server/state.json
+          key: btc-quant-state-${{ github.run_id }}
+          restore-keys: |
+            btc-quant-state-
+
+      - name: Escanear el mercado y enviar señales
+        env:
+          RUN_ONCE: '1'
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_NORMAL: ${{ secrets.TELEGRAM_CHAT_NORMAL }}
+          TELEGRAM_CHAT_CONSERVADOR: ${{ secrets.TELEGRAM_CHAT_CONSERVADOR }}
+          TELEGRAM_CHAT_PREMIUM: ${{ secrets.TELEGRAM_CHAT_PREMIUM }}
+          TIMEFRAMES: '15m,1h,4h'
+        run: node server/index.js

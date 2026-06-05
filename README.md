@@ -146,6 +146,30 @@ Súbelo a **Render** o **Railway** como *Background Worker / Service*:
 - Start: `npm start`
 - Variables de entorno: las de arriba
 
+### 🆓 Alternativa 100% gratis con GitHub Actions
+El repo incluye `.github/workflows/telegram-bot.yml`, que escanea el mercado **cada 30
+minutos** desde los servidores de GitHub (sin coste). Para activarlo:
+
+1. En tu repo de GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
+   Crea estos secretos (sin comillas):
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_NORMAL`
+   - `TELEGRAM_CHAT_CONSERVADOR`
+   - `TELEGRAM_CHAT_PREMIUM`
+2. Ve a la pestaña **Actions**, acepta activar los workflows, y abre
+   *"BTC Quant · Bot de Telegram (gratis)"* → **Run workflow** para probarlo al instante.
+3. A partir de ahí corre solo cada 30 min. El estado se guarda en la caché de Actions,
+   así que **no repite la misma señal** (solo avisa cuando cambia: p. ej. de nada a LONG).
+
+> Notas: GitHub puede retrasar algún ciclo en horas punta; los workflows programados se
+> pausan tras ~60 días sin actividad en el repo (entra y reactívalos). Para repos
+> **públicos** los minutos de Actions son ilimitados; en privados tienes 2000/mes (de
+> sobra para esto).
+
+### Modo "una sola vez"
+`RUN_ONCE=1 node server/index.js` ejecuta un único escaneo y termina (es lo que usa el
+cron de GitHub Actions). Sin esa variable, corre en bucle continuo (Railway / tu PC).
+
 El servicio escanea el mercado cada `CHECK_INTERVAL_SEC` segundos en las
 temporalidades de `TIMEFRAMES`, y solo manda una señal por modo cuando se cumplen
 sus condiciones (no repite la misma antes de `COOLDOWN_MIN` minutos). Cada modo

@@ -3,6 +3,9 @@
 .env.local
 server/.env
 
+# Runtime state of the Telegram bot (handled by the Actions cache)
+server/state.json
+
 # Dependencies
 node_modules/
 
