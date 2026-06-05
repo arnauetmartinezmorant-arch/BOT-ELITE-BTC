@@ -615,7 +615,16 @@ let wsReconnectTimer = null;
 
 const BINANCE_WS = { '1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w' };
 
-/** Open a realtime kline stream for the current timeframe (TradingView-style). */
+// Live engine timing (ms). Lower = more real-time. The chart itself updates
+// on EVERY trade tick via the @aggTrade stream (sub-second), so these only
+// govern how often indicators/signals are recomputed and the REST fallback.
+const RECOMPUTE_MS = 1000;   // indicators / signal / patterns refresh
+const REST_POLL_MS = 2000;   // REST fallback poll when WebSocket is down
+
+/** Open a realtime stream for the current timeframe (TradingView-style).
+ *  Subscribes to BOTH the kline stream (authoritative OHLC + candle rollover)
+ *  and the aggTrade stream (tick-by-tick price → the forming candle updates
+ *  several times per second). */
 function connectLiveStream() {
   closeLiveStream();
   // Demo/offline data has no real stream → drive it locally.
@@ -623,14 +632,21 @@ function connectLiveStream() {
 
   const interval = BINANCE_WS[state.tf] || '4h';
   try {
-    ws = new WebSocket(`wss://stream.binance.com:9443/ws/btcusdt@kline_${interval}`);
+    ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=btcusdt@kline_${interval}/btcusdt@aggTrade`);
     ws.onopen = () => {
       wsAlive = true;
       stopRestPolling();
       setStatus('En vivo · streaming en tiempo real', 'live');
     };
     ws.onmessage = (ev) => {
-      try { const d = JSON.parse(ev.data); if (d && d.k) applyLiveKline(d.k); } catch (e) {}
+      try {
+        const msg = JSON.parse(ev.data);
+        const d = msg.data || msg;            // combined stream wraps payload in .data
+        if (!d) return;
+        if (d.e === 'kline' && d.k) applyLiveKline(d.k);
+        else if (d.e === 'aggTrade') applyLiveTrade(d);
+        else if (d.k) applyLiveKline(d.k);     // single-stream fallback
+      } catch (e) {}
     };
     ws.onerror = () => { wsAlive = false; };
     ws.onclose = () => {
@@ -682,6 +698,28 @@ function applyLiveKline(k) {
   state._needRecompute = true;             // indicators/signal refresh on throttle
 }
 
+/** Apply a single trade tick (@aggTrade) to the forming candle so the chart
+ *  and price move in real time (several updates per second) between the
+ *  slower kline pushes. OHLC is reconciled by the kline stream. */
+function applyLiveTrade(d) {
+  const price = +d.p;
+  if (!isFinite(price)) return;
+  const arr = state.candles;
+  if (!arr.length) return;
+  const last = arr[arr.length - 1];
+  last.close = price;
+  if (price > last.high) last.high = price;
+  if (price < last.low) last.low = price;
+
+  candleSeries.update({ time: last.time, open: last.open, high: last.high, low: last.low, close: last.close });
+  state.livePrice = price;
+  $('livePrice').textContent = fmtPrice(price);
+  $('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+  refreshJournalLive();
+  if (currentActiveTrade()) updateActiveTradeStatus();
+  state._needRecompute = true;
+}
+
 /** REST fallback: poll the latest candles when WS is unavailable. */
 function startRestPolling() {
   if (restPollTimer) return;
@@ -700,9 +738,9 @@ function startRestPolling() {
       refreshJournalLive();
       if (currentActiveTrade()) updateActiveTradeStatus();
       state._needRecompute = true;
-      if (!wsAlive) setStatus('En vivo · sondeo (cada 3s)', 'live');
+      if (!wsAlive) setStatus('En vivo · sondeo (cada 2s)', 'live');
     } catch (e) { /* transient */ }
-  }, 3000);
+  }, REST_POLL_MS);
 }
 function stopRestPolling() {
   if (restPollTimer) { clearInterval(restPollTimer); restPollTimer = null; }
@@ -722,7 +760,7 @@ function startRecomputeLoop() {
     renderPatterns();
     maybeAlert(state.signal);
     if (currentActiveTrade()) saveActiveTrade();
-  }, 1200);
+  }, RECOMPUTE_MS);
 }
 function stopRecomputeLoop() {
   if (recomputeTimer) { clearInterval(recomputeTimer); recomputeTimer = null; }
