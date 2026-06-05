@@ -6,7 +6,7 @@ function fmt(v) {
   return v == null ? '—' : '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const MODE_EMOJI = { normal: '🟦', conservador: '🟩', premium: '⭐' };
+const MODE_EMOJI = { conservador: '🟩', premium: '⭐' };
 
 /** Returns an HTML-formatted Telegram message for a fired signal. */
 export function formatSignal(mode, tf, s) {

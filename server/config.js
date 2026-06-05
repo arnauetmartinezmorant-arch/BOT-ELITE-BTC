@@ -9,7 +9,6 @@ export const CONFIG = {
 
   // One channel/chat per risk mode (each mode posts to its own channel)
   channels: {
-    normal: process.env.TELEGRAM_CHAT_NORMAL || '',
     conservador: process.env.TELEGRAM_CHAT_CONSERVADOR || '',
     premium: process.env.TELEGRAM_CHAT_PREMIUM || '',
   },

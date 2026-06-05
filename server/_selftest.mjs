@@ -6,7 +6,7 @@ import { computeIndicators } from '../js/indicators.js';
 import { generateSignal } from '../js/signals.js';
 import { formatSignal } from './format.js';
 
-const modes = ['normal', 'conservador', 'premium'];
+const modes = ['conservador', 'premium'];
 let shown = 0;
 for (let i = 0; i < 50 && shown < 3; i++) {
   const candles = generateSyntheticCandles('1h', 400);

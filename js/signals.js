@@ -8,14 +8,11 @@
 import { detectAllPatterns } from './patterns.js';
 
 /** Risk profiles tune how strict the bot is before it fires a trade.
- *  - Normal:      sensible default, balanced frequency.
- *  - Conservador: stricter, fewer & safer trades.
+ *  - Conservador: solid confluence, good trades (default).
  *  - Premium:     ultra-selective. Only a couple of A+ trades a day — needs
  *                 huge confluence (many indicators aligned + trend + higher
  *                 timeframes agreeing + a confirming pattern). */
 const RISK_PROFILES = {
-  normal:      { minScore: 4.5, minConviction: 58, atrMult: 1.4, label: 'Normal',
-                 minConfirmations: 4 },
   conservador: { minScore: 6.0, minConviction: 70, atrMult: 1.6, label: 'Conservador',
                  minConfirmations: 6 },
   premium:     { minScore: 7.0, minConviction: 80, atrMult: 1.8, label: 'Premium',
@@ -165,8 +162,8 @@ function buildTradePlan(dir, ind, analysis, profile) {
  * Main entry point. Returns a full signal object for the UI.
  *  signal.direction: 'long' | 'short' | 'none'
  */
-export function generateSignal(candles, ind, riskKey = 'normal', mtfBias = null) {
-  const profile = RISK_PROFILES[riskKey] || RISK_PROFILES.normal;
+export function generateSignal(candles, ind, riskKey = 'conservador', mtfBias = null) {
+  const profile = RISK_PROFILES[riskKey] || RISK_PROFILES.conservador;
   const analysis = detectAllPatterns(candles, ind);
   const { score, factors } = scoreConfluence(candles, ind, analysis, mtfBias);
 

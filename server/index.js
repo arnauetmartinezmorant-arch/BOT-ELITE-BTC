@@ -20,7 +20,7 @@ import { CONFIG } from './config.js';
 import { sendTelegram } from './telegram.js';
 import { formatSignal } from './format.js';
 
-const MODES = ['normal', 'conservador', 'premium'];
+const MODES = ['conservador', 'premium'];
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
 const STATE_FILE = process.env.STATE_FILE || new URL('./state.json', import.meta.url).pathname;
 const RUN_ONCE = process.env.RUN_ONCE === '1' || process.env.RUN_ONCE === 'true';

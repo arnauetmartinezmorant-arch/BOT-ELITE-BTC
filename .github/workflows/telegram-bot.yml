@@ -38,7 +38,6 @@ jobs:
         env:
           RUN_ONCE: '1'
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_NORMAL: ${{ secrets.TELEGRAM_CHAT_NORMAL }}
           TELEGRAM_CHAT_CONSERVADOR: ${{ secrets.TELEGRAM_CHAT_CONSERVADOR }}
           TELEGRAM_CHAT_PREMIUM: ${{ secrets.TELEGRAM_CHAT_PREMIUM }}
           TIMEFRAMES: '15m,1h,4h'

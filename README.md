@@ -23,9 +23,8 @@ alertas sonoras + notificaciones y diario de trades.
 - **Planes de trade**: Entrada + Stop Loss (ATR + estructura) + TP1 (1:1) y TP2 (2:1).
 - **Detección de patrones**: banderas, triángulos, velas japonesas, soportes/
   resistencias y **manipulación / barridos de liquidez** (stop hunts).
-- **3 modos de riesgo**:
-  - **Normal** — frecuencia equilibrada (por defecto).
-  - **Conservador** — más estricto, menos trades y más seguros.
+- **2 modos de riesgo (solo trades de confianza)**:
+  - **Conservador** — buena confluencia, trades sólidos (por defecto).
   - **⭐ Premium** — ultra-selectivo: solo dispara con confluencia abrumadora
     (≥ 8/9 indicadores alineados + tendencia fuerte por ADX + marcos superiores a
     favor). Pensado para un par de trades A+ al día.
@@ -115,17 +114,16 @@ ordenador, deja de vigilar. Para un **24/7 real** existe el **bot de Telegram**
 
 En `server/` hay un bot de Node.js que reutiliza **exactamente el mismo motor de
 análisis** que la web y envía las señales a Telegram, con **un canal por cada modo**
-(Normal, Conservador, Premium). Así puedes seguir solo el modo que te interese.
+(Conservador, Premium). Así puedes seguir solo el modo que te interese.
 
 ### Puesta en marcha
 1. **Crea el bot**: habla con [@BotFather](https://t.me/BotFather) → `/newbot` → copia el **token**.
-2. **Crea 3 canales** en Telegram (uno por modo) y **añade tu bot como administrador** en cada uno.
+2. **Crea 2 canales** en Telegram (uno por modo) y **añade tu bot como administrador** en cada uno.
 3. Consigue el identificador de cada canal: el `@usuario` (canal público) o el `chat_id`
    numérico (privado, suele empezar por `-100…`).
 4. Configura las variables de entorno (ver `server/.env.example`):
    ```bash
    export TELEGRAM_BOT_TOKEN="tu_token"
-   export TELEGRAM_CHAT_NORMAL="@tu_canal_normal"
    export TELEGRAM_CHAT_CONSERVADOR="@tu_canal_conservador"
    export TELEGRAM_CHAT_PREMIUM="@tu_canal_premium"
    ```
@@ -153,7 +151,6 @@ minutos** desde los servidores de GitHub (sin coste). Para activarlo:
 1. En tu repo de GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
    Crea estos secretos (sin comillas):
    - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_NORMAL`
    - `TELEGRAM_CHAT_CONSERVADOR`
    - `TELEGRAM_CHAT_PREMIUM`
 2. Ve a la pestaña **Actions**, acepta activar los workflows, y abre

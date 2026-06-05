@@ -12,7 +12,7 @@ const LWC = window.LightweightCharts;
 
 const state = {
   tf: '4h',
-  risk: 'normal',
+  risk: 'conservador',
   candles: [],
   ind: null,
   signal: null,
