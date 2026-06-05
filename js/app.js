@@ -190,12 +190,10 @@ function renderChartLive() {
 
 /* ---------------------- themes ---------------------- */
 const THEMES = {
-  futuristic: { up: '#00ffa3', down: '#ff2d74', ema21: '#22e3ff', ema50: '#ff3df0', ema200: '#c4d3f5' },
-  neon:       { up: '#00ffa3', down: '#ff2bd6', ema21: '#00e5ff', ema50: '#ff2bd6', ema200: '#dCe9ff' },
+  futuristic: { up: '#00ffa3', down: '#ff2d74', ema21: '#22e3ff', ema50: '#ff3df0', ema200: '#c4d3f5', text: '#94a3b8', grid: 'rgba(148,163,184,0.06)', border: 'rgba(148,163,184,0.15)' },
+  minimal:    { up: '#16a34a', down: '#e5484d', ema21: '#d97706', ema50: '#4f46e5', ema200: '#94a3b8', text: '#5b6678', grid: 'rgba(15,23,42,0.07)', border: 'rgba(15,23,42,0.14)' },
 };
 let themeColors = THEMES.futuristic;
-let neonTimer = null;
-let neonHue = 188;
 
 function applyChartColors() {
   if (!candleSeries) return;
@@ -210,42 +208,21 @@ function applyChartColors() {
   if (state.ind) renderLegend();
 }
 
-/** Cycle neon colors across the WHOLE UI (via CSS vars) + the chart. */
-function startNeonChart() {
-  if (neonTimer) return;
-  const tick = () => {
-    neonHue = (neonHue + 4) % 360;
-    const h2 = (neonHue + 150) % 360;
-    const c1 = `hsl(${neonHue},100%,60%)`;
-    const c2 = `hsl(${h2},100%,63%)`;
-    // drive the UI colors (works in every browser, no @property needed)
-    document.body.style.setProperty('--neon', c1);
-    document.body.style.setProperty('--neon2', c2);
-    // drive the chart canvas (candles + EMAs)
-    themeColors = { up: c1, down: c2, ema21: `hsl(${neonHue},100%,66%)`, ema50: `hsl(${h2},100%,67%)`, ema200: '#dce9ff' };
-    applyChartColors();
-  };
-  tick();
-  neonTimer = setInterval(tick, 130);
-}
-function stopNeonChart() {
-  if (neonTimer) { clearInterval(neonTimer); neonTimer = null; }
-  document.body.style.removeProperty('--neon');
-  document.body.style.removeProperty('--neon2');
-}
-
 function applyTheme(name) {
   if (!THEMES[name]) name = 'futuristic';
-  document.body.classList.remove('theme-futuristic', 'theme-neon');
+  themeColors = THEMES[name];
+  document.body.classList.remove('theme-futuristic', 'theme-minimal');
   document.body.classList.add('theme-' + name);
   try { localStorage.setItem('btcQuantTheme', name); } catch (e) {}
   document.querySelectorAll('#themeSelector .tf-btn').forEach((b) => b.classList.toggle('active', b.dataset.theme === name));
-  if (name === 'neon') {
-    startNeonChart();          // chart colors cycle on a timer
-  } else {
-    stopNeonChart();
-    themeColors = THEMES[name];
-    applyChartColors();
+  applyChartColors();
+  if (chart) {
+    chart.applyOptions({
+      layout: { textColor: themeColors.text },
+      grid: { vertLines: { color: themeColors.grid }, horzLines: { color: themeColors.grid } },
+      rightPriceScale: { borderColor: themeColors.border },
+      timeScale: { borderColor: themeColors.border },
+    });
   }
 }
 

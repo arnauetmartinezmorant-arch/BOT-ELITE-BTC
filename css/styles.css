@@ -427,29 +427,30 @@ body.theme-futuristic .trade-box.sl { background: rgba(255,45,116,0.14); border-
 body.theme-futuristic .trade-tag.tp { background: rgba(0,255,163,0.92); color: #021a12; }
 body.theme-futuristic .trade-tag.sl { background: rgba(255,45,116,0.92); color: #fff; }
 
-/* ---------- 🌈 NEÓN (colores cambiantes — animado por JS para que funcione en todos los navegadores) ---------- */
-body.theme-neon {
-  --neon: #00e5ff; --neon2: #ff2bd6;   /* valores base; el JS los va rotando en vivo */
-  --bg-0: #04030d; --bg-1: #08081a; --bg-2: #0d0d22;
-  --panel: color-mix(in srgb, var(--neon) 5%, rgba(8,8,22,0.55)); --panel-solid: #0b0b1e;
-  --border: color-mix(in srgb, var(--neon) 22%, transparent);
-  --border-strong: color-mix(in srgb, var(--neon) 40%, transparent);
-  --text-0: #eaf2ff; --text-1: #c4d3f5; --text-2: #9fb0d6; --text-3: #6c7aa3;
-  --accent: var(--neon); --accent-2: var(--neon2);
-  /* Ganancia/perdida SIEMPRE verde/rojo de siempre, para no confundir (TP, SL, P&L) */
-  --long: #16c784; --long-dim: rgba(22,199,132,0.14);
-  --short: #ea3943; --short-dim: rgba(234,57,67,0.14);
-  --glow-long: 0 0 24px rgba(22,199,132,0.40); --glow-short: 0 0 24px rgba(234,57,67,0.40);
+/* ---------- ⬜ MINIMALISTA (claro / fintech) ---------- */
+body.theme-minimal {
+  --bg-0: #eef2f8; --bg-1: #f4f6fb; --bg-2: #ffffff;
+  --panel: #ffffff; --panel-solid: #ffffff;
+  --border: #e4e8f0; --border-strong: #d7deea;
+  --text-0: #0f172a; --text-1: #334155; --text-2: #5b6678; --text-3: #94a0b3;
+  --accent: #4f46e5; --accent-2: #6366f1;
+  --long: #16a34a; --long-dim: rgba(22,163,74,0.10);
+  --short: #e5484d; --short-dim: rgba(229,72,77,0.10);
+  --glow-long: 0 6px 22px rgba(22,163,74,0.18); --glow-short: 0 6px 22px rgba(229,72,77,0.18);
+  color: var(--text-0);
   background:
-    radial-gradient(900px 520px at 85% -10%, color-mix(in srgb, var(--neon2) 22%, transparent), transparent 60%),
-    radial-gradient(900px 600px at 8% 0%, color-mix(in srgb, var(--neon) 20%, transparent), transparent 55%),
-    radial-gradient(700px 520px at 50% 115%, color-mix(in srgb, var(--neon) 16%, transparent), transparent 60%),
-    #04030d;
+    radial-gradient(900px 480px at 85% -10%, rgba(79,70,229,0.10), transparent 60%),
+    radial-gradient(800px 500px at 5% 0%, rgba(16,163,74,0.07), transparent 55%),
+    #eef2f8;
 }
-body.theme-neon .topbar { background: color-mix(in srgb, var(--neon) 6%, rgba(8,8,22,0.7)); }
-body.theme-neon .panel, body.theme-neon .controls, body.theme-neon .topbar { box-shadow: 0 0 28px color-mix(in srgb, var(--neon) 14%, transparent); }
-body.theme-neon .tf-btn.active { background: linear-gradient(135deg, var(--neon), var(--neon2)); color: #04030d; box-shadow: 0 0 18px var(--neon); }
-body.theme-neon #riskSelector .tf-btn.active,
-body.theme-neon #themeSelector .tf-btn.active { background: linear-gradient(135deg, var(--neon2), var(--neon)); color: #04030d; box-shadow: 0 0 18px var(--neon2); }
-body.theme-neon .tag { background: color-mix(in srgb, var(--neon) 16%, transparent); color: var(--neon); }
-/* Las cajas TP/SL y etiquetas mantienen el verde/rojo de siempre (heredan del CSS base) */
+body.theme-minimal .topbar { background: #ffffff; box-shadow: 0 1px 2px rgba(16,24,40,0.05), 0 8px 24px rgba(16,24,40,0.06); }
+body.theme-minimal .panel, body.theme-minimal .controls { box-shadow: 0 1px 2px rgba(16,24,40,0.05), 0 8px 24px rgba(16,24,40,0.06); backdrop-filter: none; }
+body.theme-minimal .tf-selector { background: #f4f6fb; }
+body.theme-minimal .tf-btn.active { background: #ffffff; color: var(--accent); box-shadow: 0 1px 2px rgba(16,24,40,0.06), 0 4px 12px rgba(16,24,40,0.10); }
+body.theme-minimal #riskSelector .tf-btn.active,
+body.theme-minimal #themeSelector .tf-btn.active { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+body.theme-minimal .refresh-btn { background: #ffffff; border-color: var(--border-strong); color: var(--text-1); }
+body.theme-minimal .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+body.theme-minimal .chart-loader { background: rgba(255,255,255,0.82); color: var(--text-2); }
+body.theme-minimal .slider { background: #e4e8f0; }
+body.theme-minimal .icon-btn { background: #f4f6fb; }
