@@ -14,7 +14,8 @@ export const CONFIG = {
   },
 
   // Timeframes to watch (comma separated). Each is analysed every cycle.
-  timeframes: (process.env.TIMEFRAMES || '15m,1h,4h')
+  // 5m is the fastest sensible TF for the 5-min cron (faster confirmations).
+  timeframes: (process.env.TIMEFRAMES || '5m,15m,1h,4h')
     .split(',').map((s) => s.trim()).filter(Boolean),
 
   // How often to scan the market (seconds). Min 20s to respect rate limits.
