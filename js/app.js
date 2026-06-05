@@ -7,6 +7,8 @@ import { computeIndicators } from './indicators.js';
 import { generateSignal, timeframeBias } from './signals.js';
 import { setAlertsEnabled, primeAudio, playAlertSound, requestNotifyPermission, notifySignal, notifyText } from './alerts.js';
 import { getTrades, addTrade, resolveTrade, deleteTrade, clearAll, getStats, liveR } from './journal.js';
+import { detectLiquidity } from './liquidity.js';
+import { fetchNews, aggregateSentiment } from './news.js';
 
 const LWC = window.LightweightCharts;
 
@@ -21,17 +23,25 @@ const state = {
   autoRefresh: true,
   showEMA: true,
   showLevels: true,
+  showLiquidity: true,
   loading: false,
   lastAlertKey: null,
   lastLoggedKey: null,
   livePrice: null,
   activeTrades: {},
+  liquidity: null,
+  news: [],
+  newsSource: '—',
+  newsUpdatedAt: 0,
+  newsFilter: 'all',
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
 
 let chart, candleSeries, ema21Series, ema50Series, ema200Series;
 let priceLines = [];
+let liqLines = [];
+let liqSig = '';
 let refreshTimer = null;
 let tickerTimer = null;
 
@@ -161,6 +171,10 @@ function renderChart() {
     if (lv.nearestResistance) priceLines.push(candleSeries.createPriceLine({ price: lv.nearestResistance.price, color: 'rgba(234,57,67,0.35)', lineWidth: 1, lineStyle: LWC.LineStyle.Dotted, axisLabelVisible: true, title: 'Res' }));
   }
 
+  // liquidity pools drawn as dashed price lines (managed separately so they
+  // don't fight with the S/R lines above)
+  drawLiquidity(true);
+
   if (!state._fitted) {
     // Show the most recent ~140 candles (not all 400) for a clean, readable view.
     const n = c.length;
@@ -186,6 +200,37 @@ function renderChartLive() {
   // refresh S/R lines occasionally via full render path is skipped here for performance
   updateTradeOverlay();
   renderLegend();
+}
+
+/* ---------------------- liquidity pool lines on chart ---------------------- */
+function clearLiqLines() {
+  liqLines.forEach((pl) => { try { candleSeries.removePriceLine(pl); } catch (e) {} });
+  liqLines = [];
+}
+
+/**
+ * Draw the most relevant untapped liquidity pools as dashed price lines.
+ * @param {boolean} force - rebuild even if the pool set is unchanged.
+ */
+function drawLiquidity(force = false) {
+  if (!candleSeries) return;
+  const liq = state.liquidity;
+  const lines = state.showLiquidity && liq ? liq.lines : [];
+  const sig = lines.map((l) => `${l.side}:${l.price}`).join('|') + ':' + state.showLiquidity;
+  if (!force && sig === liqSig) return;     // nothing changed → avoid flicker
+  liqSig = sig;
+  clearLiqLines();
+  for (const l of lines) {
+    const buy = l.side === 'buy';
+    liqLines.push(candleSeries.createPriceLine({
+      price: l.price,
+      color: buy ? 'rgba(34,227,255,0.55)' : 'rgba(255,61,143,0.55)',
+      lineWidth: 1,
+      lineStyle: LWC.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: l.label,
+    }));
+  }
 }
 
 /* ---------------------- themes ---------------------- */
@@ -528,6 +573,126 @@ function renderMTF(results) {
   }).join('');
 }
 
+/* ---------------------- liquidity pools panel ---------------------- */
+function renderLiquidity() {
+  const host = $('liquidityList');
+  if (!host) return;
+  const liq = state.liquidity;
+  if (!liq || !liq.pools.length) {
+    $('liquidityCount').textContent = '0';
+    $('liqMeta').textContent = state.source === 'Simulado' ? 'Datos simulados' : 'En tiempo real';
+    host.innerHTML = '<div class="empty-state">Calculando zonas de liquidez…</div>';
+    return;
+  }
+
+  $('liquidityCount').textContent = String(liq.untapped);
+  $('liqMeta').textContent = `${liq.untapped} sin barrer · ${liq.pools.length} totales`;
+
+  const nearestBuyP = liq.nearestBuy ? liq.nearestBuy.price : null;
+  const nearestSellP = liq.nearestSell ? liq.nearestSell.price : null;
+
+  // show up to 12 closest pools so the panel stays readable
+  const rows = liq.pools.slice(0, 12).map((p) => {
+    const isTarget = p.price === nearestBuyP || p.price === nearestSellP;
+    const sideTxt = p.side === 'buy' ? 'BSL' : 'SSL';
+    const sideSub = p.side === 'buy' ? 'arriba' : 'abajo';
+    const dist = (p.distPct >= 0 ? '+' : '') + p.distPct.toFixed(2) + '%';
+    const distCls = p.distPct >= 0 ? 'up' : 'down';
+    const status = p.swept ? 'Barrida' : 'Sin barrer';
+    const statusCls = p.swept ? 'swept' : 'untapped';
+    const touches = p.equal ? `×${p.touches} igual` : `×${p.touches}`;
+    return `<div class="liq-row ${p.side} ${p.swept ? 'swept' : ''} ${isTarget ? 'target' : ''}">
+      <div class="liq-side">${sideTxt}${isTarget ? ' 🎯' : ''}</div>
+      <div class="liq-price">${fmtPrice(p.price)}<small>${sideSub} · ${touches}</small>
+        <div class="liq-strength"><i style="width:${p.strength}%"></i></div>
+      </div>
+      <div class="liq-dist ${distCls}">${dist}</div>
+      <div class="liq-status ${statusCls}">${status}</div>
+    </div>`;
+  }).join('');
+  host.innerHTML = rows;
+}
+
+/* ---------------------- market news panel ---------------------- */
+function relTime(ms) {
+  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (s < 60) return `hace ${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d} d`;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderNews() {
+  const host = $('newsList');
+  if (!host) return;
+  const items = state.news || [];
+
+  // aggregate sentiment tag
+  const tag = $('newsSentimentTag');
+  if (items.length) {
+    const agg = aggregateSentiment(items);
+    const lbl = agg.label === 'bull' ? '▲ Sesgo alcista' : agg.label === 'bear' ? '▼ Sesgo bajista' : '◆ Neutral';
+    tag.textContent = `${lbl}${agg.high ? ' · ⚡' + agg.high : ''}`;
+    tag.className = 'tag news-sentiment-tag ' + agg.label;
+  } else {
+    tag.textContent = '—';
+    tag.className = 'tag tag-muted';
+  }
+
+  $('newsSource').textContent = state.newsSource;
+
+  // filter
+  const f = state.newsFilter;
+  const filtered = items.filter((it) => {
+    if (f === 'all') return true;
+    if (f === 'high') return it.impact === 'high';
+    return it.sentiment === f;
+  });
+
+  if (!filtered.length) {
+    host.innerHTML = `<div class="empty-state">${items.length ? 'Sin noticias en este filtro.' : 'No se pudieron cargar noticias ahora mismo.'}</div>`;
+    return;
+  }
+
+  host.innerHTML = filtered.slice(0, 40).map((it) => {
+    const sentTxt = it.sentiment === 'bull' ? '▲ Alcista' : it.sentiment === 'bear' ? '▼ Bajista' : '◆ Neutral';
+    const highBadge = it.impact === 'high' ? '<span class="news-badge high">⚡ Impacto</span>' : '';
+    const body = it.body ? `<div class="news-body">${escapeHtml(it.body)}</div>` : '';
+    const safeUrl = it.url && it.url !== '#' ? encodeURI(it.url) : '#';
+    return `<a class="news-item ${it.sentiment} ${it.impact === 'high' ? 'high' : ''}" href="${safeUrl}" target="_blank" rel="noopener noreferrer" data-time="${it.time}">
+      <div class="news-top">
+        <span class="news-src">${escapeHtml(it.source)}</span>
+        <span class="news-badge ${it.sentiment}">${sentTxt}</span>
+        ${highBadge}
+        <span class="news-time" data-rel="${it.time}">${relTime(it.time)}</span>
+      </div>
+      <div class="news-title">${escapeHtml(it.title)}</div>
+      ${body}
+    </a>`;
+  }).join('');
+}
+
+/** Refresh just the relative timestamps + "updated ago" label every second. */
+function tickNewsClock() {
+  if (state.newsUpdatedAt) {
+    const dot = $('newsLiveDot');
+    const fresh = Date.now() - state.newsUpdatedAt < 90000;   // <90s = live
+    if (dot) dot.className = 'status-dot' + (fresh ? ' live' : ' error');
+    const up = $('newsUpdated');
+    if (up) up.textContent = state.news.length ? relTime(state.newsUpdatedAt) : '—';
+  }
+  document.querySelectorAll('#newsList [data-rel]').forEach((el) => {
+    el.textContent = relTime(+el.dataset.rel);
+  });
+}
+
 /* ---------------------- multi-timeframe ---------------------- */
 async function computeMTF() {
   const results = {};
@@ -576,11 +741,13 @@ async function analyze(opts = {}) {
     state.mtfBias = mtfBias;
 
     state.signal = generateSignal(candles, state.ind, state.risk, mtfBias);
+    state.liquidity = detectLiquidity(candles);
 
     renderChart();
     renderSignal();
     renderIndicators();
     renderPatterns();
+    renderLiquidity();
     renderJournal();
 
     // fire alert when a NEW actionable signal appears
@@ -716,10 +883,13 @@ function startRecomputeLoop() {
     state._needRecompute = false;
     state.ind = computeIndicators(state.candles);
     state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
+    state.liquidity = detectLiquidity(state.candles);
     renderChartLive();
+    drawLiquidity();              // refresh chart lines only if pools changed
     renderSignal();
     renderIndicators();
     renderPatterns();
+    renderLiquidity();
     maybeAlert(state.signal);
     if (currentActiveTrade()) saveActiveTrade();
   }, 1200);
@@ -857,6 +1027,39 @@ async function pollTicker() {
   }
 }
 
+/* ---------------------- news loop ---------------------- */
+let newsTimer = null;
+let newsClockTimer = null;
+let newsLoading = false;
+
+async function pollNews() {
+  if (newsLoading) return;
+  newsLoading = true;
+  try {
+    const { items, source } = await fetchNews(40);
+    if (items && items.length) {
+      state.news = items;
+      state.newsSource = source;
+      state.newsUpdatedAt = Date.now();
+      renderNews();
+    } else if (!state.news.length) {
+      renderNews();
+    }
+  } catch (e) {
+    console.warn('[news] fallo al actualizar:', e.message);
+  } finally {
+    newsLoading = false;
+  }
+}
+
+function startNewsLoop() {
+  pollNews();                                   // immediate first load
+  if (newsTimer) clearInterval(newsTimer);
+  newsTimer = setInterval(() => { if (!document.hidden) pollNews(); }, 30000);
+  if (newsClockTimer) clearInterval(newsClockTimer);
+  newsClockTimer = setInterval(tickNewsClock, 1000);   // live relative times
+}
+
 /* ---------------------- controls ---------------------- */
 function bindControls() {
   $('tfSelector').addEventListener('click', (e) => {
@@ -887,6 +1090,7 @@ function bindControls() {
 
   $('toggleEMA').addEventListener('change', (e) => { state.showEMA = e.target.checked; renderChart(); });
   $('toggleLevels').addEventListener('change', (e) => { state.showLevels = e.target.checked; renderChart(); });
+  $('toggleLiquidity').addEventListener('change', (e) => { state.showLiquidity = e.target.checked; drawLiquidity(true); });
   $('toggleAuto').addEventListener('change', (e) => {
     state.autoRefresh = e.target.checked;
     setupAutoRefresh();
@@ -918,6 +1122,17 @@ function bindControls() {
       clearAll();
       renderJournal();
     }
+  });
+
+  // news filter chips
+  const nf = $('newsFilters');
+  if (nf) nf.addEventListener('click', (e) => {
+    const btn = e.target.closest('.news-chip');
+    if (!btn) return;
+    nf.querySelectorAll('.news-chip').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.newsFilter = btn.dataset.filter;
+    renderNews();
   });
 
   // prime audio + notifications on first interaction anywhere
@@ -983,12 +1198,14 @@ function boot() {
   setupAutoRefresh();
   pollTicker();
   setInterval(pollTicker, 15000);
+  startNewsLoop();
 
   // catch up instantly when the user comes back to the tab
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && state.autoRefresh) {
       if (!wsAlive) connectLiveStream();
       pollTicker();
+      pollNews();
     }
   });
 }

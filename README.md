@@ -34,6 +34,15 @@ alertas sonoras + notificaciones y diario de trades.
 - **📓 Diario de trades**: registra operaciones, marca el resultado (TP2/TP1/SL/BE),
   P&L en vivo en R-múltiplos y estadísticas (win rate, R total, R medio). Se guarda
   en `localStorage`.
+- **💧 Pools de liquidez (BSL/SSL)**: detecta zonas de liquidez de compra (sobre
+  máximos) y de venta (bajo mínimos) reutilizando la misma detección de swings del
+  motor, marca si están **sin barrer** o **ya barridas**, su distancia al precio y
+  fuerza, y **dibuja las más relevantes en el gráfico** como líneas discontinuas
+  (toggle "💧 Liquidez"). No altera las señales: es contexto.
+- **📰 Noticias del mercado en vivo**: feed que se refresca solo con los titulares que
+  mueven BTC (agregador de grandes medios cripto + macro), con clasificación
+  automática **alcista/bajista/alto impacto**, sesgo agregado de sentimiento, filtros
+  y reloj relativo ("hace Xs"). Es **informativo**: NO modifica el motor de señales.
 
 ## 🗂️ Datos de mercado
 
@@ -84,6 +93,8 @@ js/
   indicators.js       EMA, RSI, MACD, ATR, Bollinger, Estocástico, ADX, volumen
   patterns.js         Tendencia, S/R, banderas, triángulos, velas, manipulación
   signals.js          Motor de confluencia + planes de trade 2:1
+  liquidity.js        Pools de liquidez (BSL/SSL) reutilizando los swings del motor
+  news.js             Capa de noticias en vivo + clasificación de sentimiento/impacto
   alerts.js           Sonido (Web Audio) + notificaciones
   journal.js          Diario de trades (localStorage) + estadísticas en R
 server/               Bot de Telegram 24/7 (reutiliza js/ como motor)

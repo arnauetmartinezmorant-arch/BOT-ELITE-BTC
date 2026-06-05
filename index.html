@@ -91,6 +91,7 @@
         <div class="toggle-row">
           <label class="switch"><input type="checkbox" id="toggleEMA" checked /><span class="slider"></span><span class="switch-text">EMAs</span></label>
           <label class="switch"><input type="checkbox" id="toggleLevels" checked /><span class="slider"></span><span class="switch-text">Niveles</span></label>
+          <label class="switch"><input type="checkbox" id="toggleLiquidity" checked /><span class="slider"></span><span class="switch-text">💧 Liquidez</span></label>
           <label class="switch"><input type="checkbox" id="toggleAuto" checked /><span class="slider"></span><span class="switch-text">Auto-refresco</span></label>
           <label class="switch"><input type="checkbox" id="toggleAlerts" checked /><span class="slider"></span><span class="switch-text">🔔 Alertas</span></label>
         </div>
@@ -196,6 +197,42 @@
         </div>
         <div id="journalStats" class="journal-stats"></div>
         <div id="journalList" class="journal-list"></div>
+      </section>
+
+      <!-- LIQUIDITY POOLS -->
+      <section class="panel liquidity-panel">
+        <div class="panel-head">
+          <h2>💧 Pools de liquidez <span id="liquidityCount" class="tag tag-muted">0</span></h2>
+          <span id="liqMeta" class="tag tag-muted">En tiempo real</span>
+        </div>
+        <div class="liq-legend">
+          <span class="liq-key buy">BSL · liquidez de compra (arriba)</span>
+          <span class="liq-key sell">SSL · liquidez de venta (abajo)</span>
+          <span class="liq-key swept">◍ barrida</span>
+        </div>
+        <div id="liquidityList" class="liquidity-list"></div>
+      </section>
+
+      <!-- NEWS -->
+      <section class="panel news-panel">
+        <div class="panel-head">
+          <h2>📰 Noticias del mercado <span id="newsSentimentTag" class="tag tag-muted">—</span></h2>
+          <div class="news-meta">
+            <span id="newsLiveDot" class="status-dot"></span>
+            <span id="newsUpdated" class="news-updated">—</span>
+            <span class="news-src-wrap">· <span id="newsSource">—</span></span>
+          </div>
+        </div>
+        <div id="newsFilters" class="news-filters">
+          <button class="news-chip active" data-filter="all">Todas</button>
+          <button class="news-chip" data-filter="high">⚡ Alto impacto</button>
+          <button class="news-chip" data-filter="bull">▲ Alcistas</button>
+          <button class="news-chip" data-filter="bear">▼ Bajistas</button>
+        </div>
+        <div id="newsList" class="news-list">
+          <div class="empty-state">Cargando noticias del mercado…</div>
+        </div>
+        <p class="news-disclaimer">Las noticias son contextuales y NO modifican el motor de señales del bot. Sigue siendo tu criterio el que decide.</p>
       </section>
     </main>
 
