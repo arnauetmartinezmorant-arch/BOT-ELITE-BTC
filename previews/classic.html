@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview · Tema CLÁSICO (diseño original)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#06080f; --panel:rgba(17,24,39,.72); --soft:#0b0f1a; --soft2:#111827;
+    --line:rgba(148,163,184,.12); --line2:rgba(148,163,184,.22);
+    --tx:#f1f5f9; --tx2:#94a3b8; --tx3:#64748b;
+    --accent:#f7931a; --accent2:#6366f1; --up:#16c784; --down:#ea3943; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(99,102,241,.10),transparent 60%),radial-gradient(900px 500px at 5% 5%,rgba(247,147,26,.08),transparent 55%),var(--bg0)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  .ribbon{font-size:12px;letter-spacing:.5px;color:var(--tx3);text-transform:uppercase;margin-bottom:10px;font-weight:600}
+  .glass{background:var(--panel);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(12px)}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,15,26,.75))}
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:34px;height:34px;border-radius:50%;background:#f7931a;display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(247,147,26,.4)}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:-.3px}
+  .brand small{font-size:11px;color:var(--tx2)}
+  .price .v{font-family:var(--mono);font-size:26px;font-weight:700;text-align:right}
+  .price .c{font-family:var(--mono);font-size:13px;color:var(--up);text-align:right}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);border:1px solid var(--line2);padding:6px 11px;border-radius:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 10px var(--up)}
+  .ctrl{display:flex;gap:22px;align-items:flex-end;margin-top:14px;padding:14px 18px}
+  .lab{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);margin-bottom:8px;font-weight:600}
+  .seg{display:inline-flex;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:4px}
+  .seg button{border:0;background:transparent;color:var(--tx2);font:600 13px Inter;padding:8px 14px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:linear-gradient(180deg,#f7931a,#d97706);color:#1a1206;box-shadow:0 4px 14px rgba(247,147,26,.35)}
+  .seg.mode button.on{background:linear-gradient(180deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.35)}
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:16px;margin-top:16px}
+  .pad{padding:18px}
+  h2{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+  .tag{font-size:11px;font-weight:700;color:var(--accent);background:rgba(247,147,26,.15);padding:3px 9px;border-radius:6px}
+  .legend{font-family:var(--mono);font-size:11px;color:var(--tx2);display:flex;gap:14px}
+  svg{display:block;width:100%;height:330px}
+  .sig{border:1px solid rgba(22,199,132,.4);border-radius:12px;padding:18px;background:linear-gradient(180deg,rgba(22,199,132,.14),transparent);box-shadow:0 0 24px rgba(22,199,132,.35)}
+  .sig .dir{font-size:30px;font-weight:800;color:var(--up);letter-spacing:1px}
+  .sig .sub{font-size:12px;color:var(--tx2);margin-bottom:12px}
+  .bar{height:7px;background:var(--soft);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:12px 0 14px}
+  .bar i{display:block;height:100%;width:74%;background:var(--up)}
+  .lv{display:flex;justify-content:space-between;padding:11px 13px;background:var(--soft);border-radius:8px;margin-bottom:5px}
+  .lv span{font-size:12px;color:var(--tx2);font-weight:600} .lv b{font-family:var(--mono);font-size:15px;font-weight:700}
+  .lv.sl b{color:var(--down)} .lv.tp b{color:var(--up)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .st{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .st small{display:block;font-size:10px;color:var(--tx3);text-transform:uppercase;margin-bottom:4px}
+  .st b{font-family:var(--mono);font-size:15px;font-weight:700}
+  .inds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .ind{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:13px}
+  .ind .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .ind .n{font-size:11px;color:var(--tx2);font-weight:700}
+  .ind .s{font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;text-transform:uppercase}
+  .s.b{background:rgba(22,199,132,.14);color:var(--up)} .s.r{background:rgba(234,57,67,.14);color:var(--down)}
+  .ind .v{font-family:var(--mono);font-size:19px;font-weight:700}
+  .foot{margin-top:18px;font-size:12px;color:var(--tx3);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ribbon">Vista previa — Tema 4: Clásico (el diseño original de la app)</div>
+  <div class="top glass">
+    <div class="brand"><div class="mark">₿</div><div><h1>BTC Quant Terminal</h1><small>Análisis algorítmico · multi-temporalidad</small></div></div>
+    <div class="price"><div class="v">$63,627.19</div><div class="c">+1.24% · 24h</div></div>
+    <div class="pill"><span class="dot"></span> En vivo · streaming</div>
+  </div>
+  <div class="ctrl glass">
+    <div><div class="lab">Temporalidad</div><div class="seg"><button>15m</button><button class="on">1H</button><button>4H</button><button>1D</button><button>1W</button></div></div>
+    <div><div class="lab">Modo de riesgo</div><div class="seg mode"><button class="on">Conservador</button><button>★ Premium</button></div></div>
+  </div>
+  <div class="grid">
+    <div class="glass pad">
+      <h2>Gráfico de velas <span class="tag">1H</span><span class="legend"><span style="color:#f7931a">EMA21</span><span style="color:#6366f1">EMA50</span><span style="color:#e2e8f0">EMA200</span></span></h2>
+      <svg id="chart" viewBox="0 0 860 330" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="glass pad">
+      <h2>Señal del bot <span class="tag">14:32</span></h2>
+      <div class="sig">
+        <div class="dir">LONG ▲</div>
+        <div class="sub">Confluencia alcista · Conservador · 7/9 indicadores</div>
+        <div class="bar"><i></i></div>
+        <div class="lv"><span>Entrada</span><b>$63,627.19</b></div>
+        <div class="lv sl"><span>Stop Loss</span><b>$62,998.49</b></div>
+        <div class="lv tp"><span>TP 1</span><b>$64,255.89</b></div>
+        <div class="lv tp"><span>TP 2 · 2:1</span><b>$64,884.59</b></div>
+        <div class="stats"><div class="st"><small>R/B</small><b>2:1</b></div><div class="st"><small>Riesgo</small><b>0.99%</b></div><div class="st"><small>Convicción</small><b>74%</b></div></div>
+      </div>
+      <div class="inds">
+        <div class="ind"><div class="h"><span class="n">RSI</span><span class="s b">Alcista</span></div><div class="v">58.4</div></div>
+        <div class="ind"><div class="h"><span class="n">MACD</span><span class="s b">Alcista</span></div><div class="v">+42</div></div>
+        <div class="ind"><div class="h"><span class="n">ADX</span><span class="s b">Fuerte</span></div><div class="v">28</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Maqueta visual · datos de ejemplo · solo para previsualizar el estilo</div>
+</div>
+<script>
+(function(){
+  const UP='#16c784',DOWN='#ea3943';
+  const svg=document.getElementById('chart');const ns='http://www.w3.org/2000/svg';
+  const W=860,H=330,pad=14,N=48;
+  let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  let p=62200;const ks=[];
+  for(let i=0;i<N;i++){const drift=i<N-7?0.0045:-0.007;const ret=drift+(rnd()-0.5)*0.011;const o=p,c=Math.max(1,o*(1+ret));ks.push({o,c,h:Math.max(o,c)*(1+rnd()*0.005),l:Math.min(o,c)*(1-rnd()*0.005)});p=c;}
+  const lo=Math.min(...ks.map(k=>k.l)),hi=Math.max(...ks.map(k=>k.h));
+  const plotW=W*0.62,cw=plotW/N;const yF=v=>pad+(hi-v)/(hi-lo)*(H-2*pad);
+  const closes=ks.map(k=>k.c);const ma=per=>closes.map((_,i)=>{if(i<per-1)return null;let s=0;for(let j=i-per+1;j<=i;j++)s+=closes[j];return s/per;});
+  const draw=(arr,col)=>{let d='';arr.forEach((v,i)=>{if(v==null)return;const x=i*cw+cw/2;d+=(d?'L':'M')+x+' '+yF(v);});const pl=document.createElementNS(ns,'path');pl.setAttribute('d',d);pl.setAttribute('fill','none');pl.setAttribute('stroke',col);pl.setAttribute('stroke-width',1.6);svg.appendChild(pl);};
+  ks.forEach((k,i)=>{const x=i*cw+cw/2;const up=k.c>=k.o;const col=up?UP:DOWN;
+    const w=document.createElementNS(ns,'line');w.setAttribute('x1',x);w.setAttribute('x2',x);w.setAttribute('y1',yF(k.h));w.setAttribute('y2',yF(k.l));w.setAttribute('stroke',col);svg.appendChild(w);
+    const r=document.createElementNS(ns,'rect');const bt=yF(Math.max(k.o,k.c)),bb=yF(Math.min(k.o,k.c));r.setAttribute('x',x-cw*0.32);r.setAttribute('width',cw*0.64);r.setAttribute('y',bt);r.setAttribute('height',Math.max(1,bb-bt));r.setAttribute('fill',col);svg.appendChild(r);});
+  draw(ma(21),'#f7931a');draw(ma(50),'#6366f1');
+  const last=ks[N-1].c,entry=last,sl=last*0.99,tp=last*1.018;
+  const bx=plotW+6,bw=W-bx-92;
+  const box=(yA,yB,fill,stroke)=>{const r=document.createElementNS(ns,'rect');r.setAttribute('x',bx);r.setAttribute('width',bw);r.setAttribute('y',Math.min(yA,yB));r.setAttribute('height',Math.abs(yB-yA));r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);svg.appendChild(r);};
+  box(yF(entry),yF(tp),'rgba(22,199,132,.15)','rgba(22,199,132,.55)');
+  box(yF(entry),yF(sl),'rgba(234,57,67,.14)','rgba(234,57,67,.55)');
+  const line=document.createElementNS(ns,'line');line.setAttribute('x1',bx);line.setAttribute('x2',bx+bw);line.setAttribute('y1',yF(entry));line.setAttribute('y2',yF(entry));line.setAttribute('stroke','#e2e8f0');line.setAttribute('stroke-dasharray','4 3');svg.appendChild(line);
+  const tag=(y,txt,tc)=>{const t=document.createElementNS(ns,'text');t.textContent=txt;t.setAttribute('x',W-6);t.setAttribute('y',y+3);t.setAttribute('text-anchor','end');t.setAttribute('font-family',"'JetBrains Mono',monospace");t.setAttribute('font-size','10');t.setAttribute('font-weight','700');t.setAttribute('fill',tc);svg.appendChild(t);};
+  tag(yF(tp)-6,'TP $64,884','#16c784');tag(yF(entry)-6,'Entrada $63,627','#e2e8f0');tag(yF(sl)+12,'SL $62,998','#ea3943');
+})();
+</script>
+</body>
+</html>
