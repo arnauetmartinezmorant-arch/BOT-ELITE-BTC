@@ -8,30 +8,51 @@
    - Once per call (GitHub Actions cron):  RUN_ONCE=1 node server/index.js
 
    Signals are evaluated on the last CLOSED candle (no repaint) and
-   de-duplicated by direction change, with state persisted to a JSON
-   file so cron runs don't spam the same alert.
+   de-duplicated by direction change. After an entry, the bot keeps
+   tracking that trade and alerts when price hits TP1 (→ stop to
+   break-even), TP2, the Stop Loss, break-even, or when the signal
+   flips against it. State is persisted to a JSON file so cron runs
+   don't spam or lose track of open trades.
    ============================================================ */
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { fetchCandles } from '../js/data.js';
 import { computeIndicators } from '../js/indicators.js';
 import { generateSignal, timeframeBias } from '../js/signals.js';
 import { CONFIG } from './config.js';
 import { sendTelegram } from './telegram.js';
-import { formatSignal } from './format.js';
+import { formatSignal, formatExit, formatReversal } from './format.js';
 
 const MODES = ['conservador', 'premium'];
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
 const STATE_FILE = process.env.STATE_FILE || new URL('./state.json', import.meta.url).pathname;
 const RUN_ONCE = process.env.RUN_ONCE === '1' || process.env.RUN_ONCE === 'true';
 
-let lastDir = loadState(); // `${mode}:${tf}` -> 'long' | 'short' | 'none'
+// Persisted state per `${mode}:${tf}`:  { dir, trade }
+//   dir   : last signalled direction ('long' | 'short' | 'none')
+//   trade : the OPEN trade we are tracking, or null. Shape:
+//           { dir, entry, stop, tp1, tp2, openTime, checkedTime, tp1Hit }
+let STATE = loadState();
 
 function loadState() {
-  try { return JSON.parse(readFileSync(STATE_FILE, 'utf8')) || {}; } catch (e) { return {}; }
+  let raw = {};
+  try { raw = JSON.parse(readFileSync(STATE_FILE, 'utf8')) || {}; } catch (e) { raw = {}; }
+  // Migrate the old flat format ({ "mode:tf": "long" }) to the new shape.
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    out[k] = typeof v === 'string'
+      ? { dir: v, trade: null }
+      : { dir: v.dir || 'none', trade: v.trade || null };
+  }
+  return out;
 }
 function saveState() {
-  try { writeFileSync(STATE_FILE, JSON.stringify(lastDir)); } catch (e) { /* ignore */ }
+  try { writeFileSync(STATE_FILE, JSON.stringify(STATE)); } catch (e) { /* ignore */ }
+}
+function entryFor(key) {
+  if (!STATE[key]) STATE[key] = { dir: 'none', trade: null };
+  return STATE[key];
 }
 
 function activeModes() { return MODES.filter((m) => CONFIG.channels[m]); }
@@ -55,6 +76,43 @@ async function mtfBiasFor(tf) {
   return { up, down, total: scope.length, score: up - down };
 }
 
+/**
+ * Walk the CLOSED candles printed after a trade's last check and detect
+ * whether any of its levels were touched (no repaint). The cursor
+ * `checkedTime` advances so each candle is evaluated exactly once.
+ * Returns { events, closed, tp1Hit, stop, checkedTime }.
+ */
+export function evaluateTrade(trade, closed) {
+  const isLong = trade.dir === 'long';
+  let stop = trade.stop;
+  let tp1Hit = !!trade.tp1Hit;
+  const since = trade.checkedTime || trade.openTime || 0;
+  const events = [];
+  let isClosed = false;
+  let seen = since;
+
+  for (const c of closed) {
+    if (c.time <= since) continue; // only candles not yet evaluated
+    seen = c.time;
+    if (isLong) {
+      if (c.low <= stop) { events.push({ type: tp1Hit ? 'be' : 'sl', price: stop, time: c.time }); isClosed = true; break; }
+      if (c.high >= trade.tp2) {
+        if (!tp1Hit) events.push({ type: 'tp1', price: trade.tp1, time: c.time });
+        events.push({ type: 'tp2', price: trade.tp2, time: c.time }); isClosed = true; break;
+      }
+      if (!tp1Hit && c.high >= trade.tp1) { tp1Hit = true; stop = trade.entry; events.push({ type: 'tp1', price: trade.tp1, time: c.time }); }
+    } else {
+      if (c.high >= stop) { events.push({ type: tp1Hit ? 'be' : 'sl', price: stop, time: c.time }); isClosed = true; break; }
+      if (c.low <= trade.tp2) {
+        if (!tp1Hit) events.push({ type: 'tp1', price: trade.tp1, time: c.time });
+        events.push({ type: 'tp2', price: trade.tp2, time: c.time }); isClosed = true; break;
+      }
+      if (!tp1Hit && c.low <= trade.tp1) { tp1Hit = true; stop = trade.entry; events.push({ type: 'tp1', price: trade.tp1, time: c.time }); }
+    }
+  }
+  return { events, closed: isClosed, tp1Hit, stop, checkedTime: seen };
+}
+
 async function checkTimeframe(tf) {
   const { candles, source } = await fetchCandles(tf, 400);
   if (source === 'Simulado' && !CONFIG.dryRun) {
@@ -64,21 +122,56 @@ async function checkTimeframe(tf) {
   const closed = closedOnly(candles);
   const ind = computeIndicators(closed);
   const mtf = await mtfBiasFor(tf);
+  const lastClosedTime = closed.length ? closed[closed.length - 1].time : 0;
 
   for (const mode of activeModes()) {
     let sig;
     try { sig = generateSignal(closed, ind, mode, mtf); } catch (e) { continue; }
     const key = `${mode}:${tf}`;
+    const st = entryFor(key);
     const dir = sig.direction; // 'long' | 'short' | 'none'
+    const chat = CONFIG.channels[mode];
+    const stamp = () => new Date().toISOString();
 
-    // Only alert when the direction CHANGES (e.g. none→long, long→short).
-    if (dir === lastDir[key]) continue;
-    lastDir[key] = dir;
-    if (dir === 'none' || !sig.plan) continue;
+    // 1) Track the lifecycle of a trade we already alerted (TP1/TP2/SL/BE).
+    if (st.trade) {
+      const res = evaluateTrade(st.trade, closed);
+      st.trade.tp1Hit = res.tp1Hit;
+      st.trade.stop = res.stop;
+      st.trade.checkedTime = res.checkedTime;
+      for (const ev of res.events) {
+        const ok = await sendTelegram(chat, formatExit(mode, tf, st.trade, ev));
+        console.log(`[${stamp()}] ${mode}/${tf} → ${ev.type.toUpperCase()} @ ${ev.price} ${ok ? '· enviado' : '· NO enviado'}`);
+      }
+      if (res.closed) st.trade = null;
+    }
 
-    const ok = await sendTelegram(CONFIG.channels[mode], formatSignal(mode, tf, sig));
-    console.log(`[${new Date().toISOString()}] ${mode}/${tf} → ${dir.toUpperCase()} ` +
-      `conv ${sig.conviction}% ${ok ? '· enviado' : '· NO enviado'}`);
+    // 2) Direction change → close-on-reversal and/or open a new trade.
+    if (dir !== st.dir) {
+      // The live signal flipped against an open trade → warn it's invalidated.
+      if (st.trade && dir !== st.trade.dir) {
+        const ok = await sendTelegram(chat, formatReversal(mode, tf, st.trade, dir));
+        console.log(`[${stamp()}] ${mode}/${tf} → CIERRE POR CAMBIO DE SEÑAL ${ok ? '· enviado' : '· NO enviado'}`);
+        st.trade = null;
+      }
+      st.dir = dir;
+
+      if (dir !== 'none' && sig.plan) {
+        const ok = await sendTelegram(chat, formatSignal(mode, tf, sig));
+        st.trade = {
+          dir,
+          entry: sig.plan.entry,
+          stop: sig.plan.stop,
+          tp1: sig.plan.tp1,
+          tp2: sig.plan.tp2,
+          openTime: lastClosedTime,
+          checkedTime: lastClosedTime,
+          tp1Hit: false,
+        };
+        console.log(`[${stamp()}] ${mode}/${tf} → ${dir.toUpperCase()} ` +
+          `conv ${sig.conviction}% ${ok ? '· enviado' : '· NO enviado'}`);
+      }
+    }
   }
 }
 
@@ -107,4 +200,7 @@ async function start() {
   setInterval(loop, CONFIG.intervalSec * 1000);
 }
 
-start();
+// Only auto-run when executed directly (so the module stays importable/testable).
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  start();
+}

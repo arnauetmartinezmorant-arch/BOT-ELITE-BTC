@@ -1,9 +1,10 @@
 name: BTC Quant · Bot de Telegram (gratis)
 
-# Se ejecuta solo cada 30 minutos, y también puedes lanzarlo a mano.
+# Se ejecuta cada 5 minutos (mínimo permitido por GitHub Actions),
+# y también puedes lanzarlo a mano.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 # Evita que se solapen dos ejecuciones
