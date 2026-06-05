@@ -34,6 +34,7 @@ const state = {
   newsSource: '—',
   newsUpdatedAt: 0,
   newsFilter: 'all',
+  newsAlerts: (() => { try { return localStorage.getItem('btc_news_alerts') !== '0'; } catch (e) { return true; } })(),
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -1031,6 +1032,50 @@ async function pollTicker() {
 let newsTimer = null;
 let newsClockTimer = null;
 let newsLoading = false;
+const seenNewsIds = new Set();
+let newsPrimed = false;
+
+/**
+ * Fire a sound + notification when genuinely NEW high-impact headlines arrive.
+ * The first successful load only primes the "seen" set (no alert blast on open),
+ * and alerts respect both the master 🔔 toggle and the per-panel news toggle.
+ */
+function maybeNewsAlert(items) {
+  if (!items || !items.length) return;
+  if (!newsPrimed) {                       // first load → remember, don't alert
+    items.forEach((it) => seenNewsIds.add(it.id));
+    newsPrimed = true;
+    return;
+  }
+  const fresh = items.filter((it) => !seenNewsIds.has(it.id));
+  items.forEach((it) => seenNewsIds.add(it.id));
+  if (seenNewsIds.size > 600) {            // keep the set bounded across a session
+    seenNewsIds.clear();
+    items.forEach((it) => seenNewsIds.add(it.id));
+  }
+  if (!state.newsAlerts) return;           // news alerts muted by the user
+
+  const hot = fresh.filter((it) => it.impact === 'high');
+  if (!hot.length) return;
+
+  const dir = hot[0].sentiment === 'bear' ? 'short' : 'long';
+  playAlertSound(dir);
+  hot.slice(0, 2).forEach((it) => {
+    const tag = it.sentiment === 'bull' ? '▲' : it.sentiment === 'bear' ? '▼' : '◆';
+    notifyText(`⚡ Noticia de alto impacto ${tag}`, `${it.source}: ${it.title}`);
+  });
+  flashNewsAlert(hot.length);
+}
+
+/** Brief visual cue on the news panel when a high-impact alert fires. */
+function flashNewsAlert(count) {
+  const panel = document.querySelector('.news-panel');
+  if (!panel) return;
+  panel.classList.add('news-flash');
+  setTimeout(() => panel.classList.remove('news-flash'), 1400);
+  const tag = $('newsSentimentTag');
+  if (tag) { tag.classList.add('news-tag-ping'); setTimeout(() => tag.classList.remove('news-tag-ping'), 1400); }
+}
 
 async function pollNews() {
   if (newsLoading) return;
@@ -1042,6 +1087,7 @@ async function pollNews() {
       state.newsSource = source;
       state.newsUpdatedAt = Date.now();
       renderNews();
+      maybeNewsAlert(items);
     } else if (!state.news.length) {
       renderNews();
     }
@@ -1134,6 +1180,25 @@ function bindControls() {
     state.newsFilter = btn.dataset.filter;
     renderNews();
   });
+
+  // per-panel toggle for high-impact news alerts
+  const nat = $('newsAlertToggle');
+  if (nat) {
+    const paintNat = () => {
+      nat.classList.toggle('active', state.newsAlerts);
+      nat.textContent = state.newsAlerts ? '🔔' : '🔕';
+      nat.title = state.newsAlerts
+        ? 'Alertas de noticias de alto impacto: ACTIVAS (clic para silenciar)'
+        : 'Alertas de noticias de alto impacto: silenciadas (clic para activar)';
+    };
+    paintNat();
+    nat.addEventListener('click', () => {
+      state.newsAlerts = !state.newsAlerts;
+      try { localStorage.setItem('btc_news_alerts', state.newsAlerts ? '1' : '0'); } catch (e) {}
+      paintNat();
+      primeAudio();   // unlock audio on this gesture so future alerts sound
+    });
+  }
 
   // prime audio + notifications on first interaction anywhere
   window.addEventListener('pointerdown', primeAudio, { once: true });

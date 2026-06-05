@@ -42,7 +42,9 @@ alertas sonoras + notificaciones y diario de trades.
 - **📰 Noticias del mercado en vivo**: feed que se refresca solo con los titulares que
   mueven BTC (agregador de grandes medios cripto + macro), con clasificación
   automática **alcista/bajista/alto impacto**, sesgo agregado de sentimiento, filtros
-  y reloj relativo ("hace Xs"). Es **informativo**: NO modifica el motor de señales.
+  y reloj relativo ("hace Xs"). Avisa con **sonido + notificación** cuando entra una
+  noticia de **alto impacto** (campana 🔔 del panel para silenciarlas). Es
+  **informativo**: NO modifica el motor de señales.
 
 ## 🗂️ Datos de mercado
 
