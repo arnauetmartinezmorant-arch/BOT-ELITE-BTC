@@ -436,10 +436,10 @@ body.theme-neon {
   --border-strong: color-mix(in srgb, var(--neon) 40%, transparent);
   --text-0: #eaf2ff; --text-1: #c4d3f5; --text-2: #9fb0d6; --text-3: #6c7aa3;
   --accent: var(--neon); --accent-2: var(--neon2);
-  --long: var(--neon); --long-dim: color-mix(in srgb, var(--neon) 14%, transparent);
-  --short: var(--neon2); --short-dim: color-mix(in srgb, var(--neon2) 14%, transparent);
-  --glow-long: 0 0 26px color-mix(in srgb, var(--neon) 55%, transparent);
-  --glow-short: 0 0 26px color-mix(in srgb, var(--neon2) 55%, transparent);
+  /* Ganancia/perdida SIEMPRE verde/rojo de siempre, para no confundir (TP, SL, P&L) */
+  --long: #16c784; --long-dim: rgba(22,199,132,0.14);
+  --short: #ea3943; --short-dim: rgba(234,57,67,0.14);
+  --glow-long: 0 0 24px rgba(22,199,132,0.40); --glow-short: 0 0 24px rgba(234,57,67,0.40);
   background:
     radial-gradient(900px 520px at 85% -10%, color-mix(in srgb, var(--neon2) 22%, transparent), transparent 60%),
     radial-gradient(900px 600px at 8% 0%, color-mix(in srgb, var(--neon) 20%, transparent), transparent 55%),
@@ -452,7 +452,4 @@ body.theme-neon .tf-btn.active { background: linear-gradient(135deg, var(--neon)
 body.theme-neon #riskSelector .tf-btn.active,
 body.theme-neon #themeSelector .tf-btn.active { background: linear-gradient(135deg, var(--neon2), var(--neon)); color: #04030d; box-shadow: 0 0 18px var(--neon2); }
 body.theme-neon .tag { background: color-mix(in srgb, var(--neon) 16%, transparent); color: var(--neon); }
-body.theme-neon .trade-box.tp { background: color-mix(in srgb, var(--neon) 14%, transparent); border-color: color-mix(in srgb, var(--neon) 60%, transparent); }
-body.theme-neon .trade-box.sl { background: color-mix(in srgb, var(--neon2) 14%, transparent); border-color: color-mix(in srgb, var(--neon2) 60%, transparent); }
-body.theme-neon .trade-tag.tp { background: var(--neon); color: #04030d; }
-body.theme-neon .trade-tag.sl { background: var(--neon2); color: #04030d; }
+/* Las cajas TP/SL y etiquetas mantienen el verde/rojo de siempre (heredan del CSS base) */
