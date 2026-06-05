@@ -138,7 +138,8 @@ body {
     "chart signal"
     "indicators signal"
     "mtf patterns"
-    "journal journal";
+    "journal journal"
+    "liquidity news";
   gap: 16px;
   margin-top: 16px;
 }
@@ -148,6 +149,8 @@ body {
 .mtf-panel { grid-area: mtf; }
 .patterns-panel { grid-area: patterns; }
 .journal-panel { grid-area: journal; }
+.liquidity-panel { grid-area: liquidity; }
+.news-panel { grid-area: news; display: flex; flex-direction: column; }
 
 .panel {
   background: var(--panel);
@@ -364,6 +367,99 @@ body {
 .pattern-conf { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text-1); text-align: right; flex-shrink: 0; }
 .empty-state { text-align: center; padding: 30px 14px; color: var(--text-3); font-size: 13px; }
 
+/* ===================== LIQUIDITY POOLS ===================== */
+.liq-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 10.5px; color: var(--text-3); }
+.liq-key { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.liq-key::before { content: ''; width: 14px; height: 3px; border-radius: 2px; background: var(--text-3); }
+.liq-key.buy::before { background: var(--long); }
+.liq-key.sell::before { background: var(--short); }
+.liq-key.swept::before { background: var(--text-3); opacity: 0.5; }
+
+.liquidity-list { display: flex; flex-direction: column; gap: 7px; max-height: 360px; overflow-y: auto; }
+.liq-row {
+  display: grid; grid-template-columns: 58px 1fr auto auto; align-items: center; gap: 12px;
+  padding: 10px 13px; background: var(--bg-1); border: 1px solid var(--border);
+  border-left-width: 3px; border-radius: var(--radius-sm); transition: 0.15s;
+}
+.liq-row.buy { border-left-color: var(--long); }
+.liq-row.sell { border-left-color: var(--short); }
+.liq-row.swept { opacity: 0.5; }
+.liq-row.target { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.liq-row.target.buy { background: linear-gradient(90deg, var(--long-dim), var(--bg-1)); }
+.liq-row.target.sell { background: linear-gradient(90deg, var(--short-dim), var(--bg-1)); }
+.liq-side { font-family: var(--mono); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
+.liq-row.buy .liq-side { color: var(--long); }
+.liq-row.sell .liq-side { color: var(--short); }
+.liq-price { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text-0); }
+.liq-price small { display: block; font-size: 10px; color: var(--text-3); font-weight: 600; margin-top: 1px; }
+.liq-dist { font-family: var(--mono); font-size: 12px; font-weight: 700; text-align: right; }
+.liq-dist.up { color: var(--long); }
+.liq-dist.down { color: var(--short); }
+.liq-status { font-size: 9px; font-weight: 800; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.liq-status.untapped { background: rgba(247,147,26,0.16); color: var(--accent); }
+.liq-status.swept { background: rgba(148,163,184,0.14); color: var(--text-2); }
+.liq-strength { height: 3px; border-radius: 2px; background: var(--border-strong); margin-top: 4px; overflow: hidden; }
+.liq-strength i { display: block; height: 100%; border-radius: 2px; }
+.liq-row.buy .liq-strength i { background: var(--long); }
+.liq-row.sell .liq-strength i { background: var(--short); }
+
+/* liquidity price-lines drawn on the chart keep TradingView feel via LWC API */
+
+/* ===================== NEWS ===================== */
+.news-meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); }
+.news-meta .status-dot { width: 8px; height: 8px; }
+.news-meta .status-dot.live { background: var(--long); animation: pulse 2s infinite; }
+.news-updated { font-family: var(--mono); font-weight: 600; color: var(--text-1); }
+.news-src-wrap { color: var(--text-3); }
+#newsSource { color: var(--text-2); font-weight: 600; }
+
+.news-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.news-chip {
+  border: 1px solid var(--border); background: var(--bg-1); color: var(--text-2);
+  font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 20px;
+  cursor: pointer; transition: 0.15s; font-family: inherit;
+}
+.news-chip:hover { color: var(--text-0); border-color: var(--border-strong); }
+.news-chip.active { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+
+.news-list { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; flex: 1; }
+.news-item {
+  display: block; text-decoration: none; padding: 11px 13px; background: var(--bg-1);
+  border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius-sm);
+  transition: 0.15s; color: inherit;
+}
+.news-item:hover { border-color: var(--border-strong); transform: translateX(2px); }
+.news-item.bull { border-left-color: var(--long); }
+.news-item.bear { border-left-color: var(--short); }
+.news-item.neutral { border-left-color: var(--text-3); }
+.news-item.high { box-shadow: inset 0 0 0 1px rgba(247,147,26,0.25); }
+.news-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; flex-wrap: wrap; }
+.news-src { font-size: 10px; font-weight: 800; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.4px; }
+.news-time { font-family: var(--mono); font-size: 10px; color: var(--text-3); margin-left: auto; }
+.news-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+.news-badge.bull { background: var(--long-dim); color: var(--long); }
+.news-badge.bear { background: var(--short-dim); color: var(--short); }
+.news-badge.neutral { background: rgba(148,163,184,0.12); color: var(--text-2); }
+.news-badge.high { background: rgba(247,147,26,0.16); color: var(--accent); }
+.news-title { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--text-0); }
+.news-item:hover .news-title { color: var(--accent); }
+.news-body { font-size: 11px; color: var(--text-3); line-height: 1.45; margin-top: 4px; }
+.news-disclaimer { font-size: 10.5px; color: var(--text-3); line-height: 1.5; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* high-impact news alert cue */
+.news-panel.news-flash { animation: newsFlash 1.4s ease; }
+@keyframes newsFlash {
+  0% { box-shadow: 0 0 0 0 rgba(247,147,26,0); }
+  18% { box-shadow: 0 0 0 2px var(--accent), 0 0 26px rgba(247,147,26,0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(247,147,26,0); }
+}
+.news-tag-ping { animation: newsTagPing 1.4s ease; }
+@keyframes newsTagPing { 0%,100% { transform: scale(1); } 30% { transform: scale(1.18); } }
+
+.news-sentiment-tag.bull { background: var(--long-dim); color: var(--long); }
+.news-sentiment-tag.bear { background: var(--short-dim); color: var(--short); }
+.news-sentiment-tag.neutral { background: rgba(148,163,184,0.12); color: var(--text-2); }
+
 /* ===================== FOOTER ===================== */
 .footer { display: flex; justify-content: space-between; margin-top: 22px; padding: 16px 4px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
 
@@ -377,7 +473,7 @@ body {
 @media (max-width: 1200px) {
   .main-grid {
     grid-template-columns: 1fr;
-    grid-template-areas: "chart" "signal" "indicators" "mtf" "patterns" "journal";
+    grid-template-areas: "chart" "signal" "indicators" "mtf" "patterns" "journal" "liquidity" "news";
   }
   .signal-panel { order: -1; }
 }
