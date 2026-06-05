@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview · Tema ULTRA FUTURISTA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cyan:#22e3ff; --mag:#ff3df0; --vio:#8b5cf6; --grn:#00ffa3; --pink:#ff2d74;
+    --tx:#dbeafe; --tx2:#8ea0c9; --glass:rgba(120,150,255,.06);
+    --mono:'Rajdhani',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Rajdhani',sans-serif;color:var(--tx);min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(255,61,240,.18), transparent 60%),
+      radial-gradient(900px 600px at 10% 0%, rgba(34,227,255,.16), transparent 55%),
+      radial-gradient(700px 500px at 50% 110%, rgba(139,92,246,.20), transparent 60%),
+      #04030f;
+    -webkit-font-smoothing:antialiased;position:relative;overflow-x:hidden;
+  }
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(120,160,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,255,.06) 1px,transparent 1px);background-size:38px 38px;mask-image:radial-gradient(circle at 50% 30%,#000,transparent 80%);pointer-events:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px;position:relative;z-index:1}
+  .ribbon{font-family:'Orbitron';font-size:12px;letter-spacing:3px;color:var(--cyan);text-transform:uppercase;margin-bottom:12px;text-shadow:0 0 12px rgba(34,227,255,.6)}
+  .glass{background:var(--glass);border:1px solid rgba(140,170,255,.18);border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(34,227,255,.06),inset 0 1px 0 rgba(255,255,255,.05)}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .mark{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-family:'Orbitron';font-weight:900;font-size:20px;color:#04030f;background:linear-gradient(135deg,var(--cyan),var(--mag));box-shadow:0 0 22px rgba(34,227,255,.6)}
+  .brand h1{font-family:'Orbitron';font-size:17px;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--mag),var(--vio));-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% auto;animation:flow 6s linear infinite}
+  @keyframes flow{to{background-position:200% center}}
+  .brand small{font-size:12px;color:var(--tx2);letter-spacing:1px}
+  .price .v{font-family:'Orbitron';font-size:26px;font-weight:700;color:#fff;text-shadow:0 0 18px rgba(34,227,255,.5);text-align:right}
+  .price .c{font-size:14px;color:var(--grn);text-align:right;letter-spacing:1px}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:1px;color:var(--cyan);border:1px solid rgba(34,227,255,.4);padding:6px 12px;border-radius:20px;box-shadow:0 0 16px rgba(34,227,255,.25)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  .ctrl{display:flex;gap:24px;align-items:flex-end;margin-top:14px;padding:14px 18px;flex-wrap:wrap}
+  .lab{font-family:'Orbitron';font-size:10px;letter-spacing:2px;color:var(--tx2);margin-bottom:8px;text-transform:uppercase}
+  .seg{display:inline-flex;gap:5px;padding:4px;border:1px solid rgba(140,170,255,.18);border-radius:10px;background:rgba(5,8,25,.5)}
+  .seg button{border:0;background:transparent;color:var(--tx2);font:600 13px Rajdhani;letter-spacing:1px;padding:8px 14px;border-radius:7px;cursor:pointer}
+  .seg button.on{color:#04030f;background:linear-gradient(135deg,var(--cyan),var(--vio));box-shadow:0 0 18px rgba(34,227,255,.5)}
+  .seg.mode button.on{background:linear-gradient(135deg,var(--mag),var(--vio));box-shadow:0 0 18px rgba(255,61,240,.5)}
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:14px;margin-top:14px}
+  .card{padding:16px}
+  .card h2{font-family:'Orbitron';font-size:13px;letter-spacing:1px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;color:#cfe6ff}
+  .tag{font-size:12px;letter-spacing:1px;color:var(--cyan);border:1px solid rgba(34,227,255,.35);padding:2px 9px;border-radius:6px}
+  .legend{font-size:12px;color:var(--tx2);display:flex;gap:14px;letter-spacing:.5px}
+  svg{display:block;width:100%;height:330px}
+  .sig{border:1px solid rgba(0,255,163,.4);border-radius:12px;padding:18px;background:linear-gradient(180deg,rgba(0,255,163,.10),transparent);box-shadow:0 0 30px rgba(0,255,163,.18)}
+  .sig .dir{font-family:'Orbitron';font-size:30px;font-weight:900;color:var(--grn);letter-spacing:2px;text-shadow:0 0 20px rgba(0,255,163,.6)}
+  .sig .sub{font-size:13px;color:var(--tx2);margin-bottom:12px;letter-spacing:.5px}
+  .bar{height:7px;background:rgba(5,8,25,.6);border:1px solid rgba(140,170,255,.18);border-radius:6px;overflow:hidden;margin:10px 0 14px}
+  .bar i{display:block;height:100%;width:78%;background:linear-gradient(90deg,var(--cyan),var(--grn));box-shadow:0 0 12px var(--grn)}
+  .lv{display:flex;justify-content:space-between;padding:10px 12px;background:rgba(5,8,25,.5);border:1px solid rgba(140,170,255,.14);border-radius:8px;margin-bottom:6px}
+  .lv span{font-size:13px;color:var(--tx2);letter-spacing:.5px} .lv b{font-family:'Orbitron';font-size:14px}
+  .lv.sl b{color:var(--pink)} .lv.tp b{color:var(--grn)} .lv.en b{color:#fff}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .st{background:rgba(5,8,25,.5);border:1px solid rgba(140,170,255,.14);border-radius:8px;padding:10px;text-align:center}
+  .st small{display:block;font-size:9px;color:var(--tx2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+  .st b{font-family:'Orbitron';font-size:14px;color:#fff}
+  .inds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .ind{background:rgba(5,8,25,.45);border:1px solid rgba(140,170,255,.14);border-radius:10px;padding:12px}
+  .ind .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .ind .n{font-size:12px;color:var(--tx2);letter-spacing:1px;font-weight:600}
+  .ind .s{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.5px}
+  .s.b{background:rgba(0,255,163,.15);color:var(--grn)} .s.r{background:rgba(255,45,116,.15);color:var(--pink)}
+  .ind .v{font-family:'Orbitron';font-size:17px;font-weight:700;color:#fff}
+  .foot{margin-top:16px;font-size:12px;color:var(--tx2);text-align:center;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ribbon">// Vista previa — Tema 2: Ultra Futurista</div>
+
+  <div class="top glass">
+    <div class="brand"><div class="mark">₿</div>
+      <div><h1>BTC QUANT TERMINAL</h1><small>NEURAL MARKET ENGINE · MULTI-TF</small></div></div>
+    <div class="price"><div class="v">$63,627.19</div><div class="c">▲ +1.24% · 24H</div></div>
+    <div class="pill"><span class="dot"></span> LIVE · STREAMING</div>
+  </div>
+
+  <div class="ctrl glass">
+    <div><div class="lab">Temporalidad</div>
+      <div class="seg"><button>15m</button><button class="on">1H</button><button>4H</button><button>1D</button><button>1W</button></div></div>
+    <div><div class="lab">Modo</div>
+      <div class="seg mode"><button class="on">Conservador</button><button>★ Premium</button></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card glass">
+      <h2>GRÁFICO DE VELAS <span class="tag">1H</span>
+        <span class="legend"><span style="color:#22e3ff">EMA21</span><span style="color:#ff3df0">EMA50</span></span></h2>
+      <svg id="chart" viewBox="0 0 860 330" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="card glass">
+      <h2>SEÑAL DEL BOT <span class="tag">14:32</span></h2>
+      <div class="sig">
+        <div class="dir">LONG ▲</div>
+        <div class="sub">Confluencia alcista · Conservador · 7/9 indicadores</div>
+        <div class="bar"><i></i></div>
+        <div class="lv en"><span>Entrada</span><b>$63,627.19</b></div>
+        <div class="lv sl"><span>Stop Loss</span><b>$62,998.49</b></div>
+        <div class="lv tp"><span>TP 1</span><b>$64,255.89</b></div>
+        <div class="lv tp"><span>TP 2 · 2:1</span><b>$64,884.59</b></div>
+        <div class="stats">
+          <div class="st"><small>R/B</small><b>2:1</b></div>
+          <div class="st"><small>Riesgo</small><b>0.99%</b></div>
+          <div class="st"><small>Conv.</small><b>74%</b></div>
+        </div>
+      </div>
+      <div class="inds">
+        <div class="ind"><div class="h"><span class="n">RSI</span><span class="s b">ALCISTA</span></div><div class="v">58.4</div></div>
+        <div class="ind"><div class="h"><span class="n">MACD</span><span class="s b">ALCISTA</span></div><div class="v">+42</div></div>
+        <div class="ind"><div class="h"><span class="n">ADX</span><span class="s b">FUERTE</span></div><div class="v">28</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">// Maqueta visual · datos de ejemplo · solo para previsualizar el estilo</div>
+</div>
+<script>
+(function(){
+  const UP='#00ffa3',DOWN='#ff2d74';
+  const svg=document.getElementById('chart');const ns='http://www.w3.org/2000/svg';
+  // glow filter
+  const defs=document.createElementNS(ns,'defs');
+  defs.innerHTML='<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  svg.appendChild(defs);
+  const W=860,H=330,pad=14,N=48;
+  let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  let p=62200;const ks=[];
+  for(let i=0;i<N;i++){const drift=i<N-7?0.0045:-0.007;const ret=drift+(rnd()-0.5)*0.011;const o=p,c=Math.max(1,o*(1+ret));ks.push({o,c,h:Math.max(o,c)*(1+rnd()*0.005),l:Math.min(o,c)*(1-rnd()*0.005)});p=c;}
+  const lo=Math.min(...ks.map(k=>k.l)),hi=Math.max(...ks.map(k=>k.h));
+  const plotW=W*0.62,cw=plotW/N;const yF=v=>pad+(hi-v)/(hi-lo)*(H-2*pad);
+  const closes=ks.map(k=>k.c);const ma=per=>closes.map((_,i)=>{if(i<per-1)return null;let s=0;for(let j=i-per+1;j<=i;j++)s+=closes[j];return s/per;});
+  const draw=(arr,col)=>{let d='';arr.forEach((v,i)=>{if(v==null)return;const x=i*cw+cw/2;d+=(d?'L':'M')+x+' '+yF(v);});const pl=document.createElementNS(ns,'path');pl.setAttribute('d',d);pl.setAttribute('fill','none');pl.setAttribute('stroke',col);pl.setAttribute('stroke-width',1.6);pl.setAttribute('filter','url(#g)');svg.appendChild(pl);};
+  ks.forEach((k,i)=>{const x=i*cw+cw/2;const up=k.c>=k.o;const col=up?UP:DOWN;
+    const w=document.createElementNS(ns,'line');w.setAttribute('x1',x);w.setAttribute('x2',x);w.setAttribute('y1',yF(k.h));w.setAttribute('y2',yF(k.l));w.setAttribute('stroke',col);w.setAttribute('filter','url(#g)');svg.appendChild(w);
+    const r=document.createElementNS(ns,'rect');const bt=yF(Math.max(k.o,k.c)),bb=yF(Math.min(k.o,k.c));r.setAttribute('x',x-cw*0.32);r.setAttribute('width',cw*0.64);r.setAttribute('y',bt);r.setAttribute('height',Math.max(1,bb-bt));r.setAttribute('fill',col);r.setAttribute('filter','url(#g)');svg.appendChild(r);});
+  draw(ma(21),'#22e3ff');draw(ma(50),'#ff3df0');
+  const last=ks[N-1].c,entry=last,sl=last*0.99,tp=last*1.018;
+  const bx=plotW+6,bw=W-bx-92;
+  const box=(yA,yB,fill,stroke)=>{const r=document.createElementNS(ns,'rect');r.setAttribute('x',bx);r.setAttribute('width',bw);r.setAttribute('y',Math.min(yA,yB));r.setAttribute('height',Math.abs(yB-yA));r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);r.setAttribute('rx',2);svg.appendChild(r);};
+  box(yF(entry),yF(tp),'rgba(0,255,163,.14)','rgba(0,255,163,.55)');
+  box(yF(entry),yF(sl),'rgba(255,45,116,.14)','rgba(255,45,116,.55)');
+  const line=document.createElementNS(ns,'line');line.setAttribute('x1',bx);line.setAttribute('x2',bx+bw);line.setAttribute('y1',yF(entry));line.setAttribute('y2',yF(entry));line.setAttribute('stroke','#fff');line.setAttribute('stroke-dasharray','4 3');line.setAttribute('opacity','.8');svg.appendChild(line);
+  const tag=(y,txt,tc)=>{const t=document.createElementNS(ns,'text');t.textContent=txt;t.setAttribute('x',W-6);t.setAttribute('y',y+3);t.setAttribute('text-anchor','end');t.setAttribute('font-family',"'Orbitron'");t.setAttribute('font-size','9.5');t.setAttribute('font-weight','700');t.setAttribute('fill',tc);svg.appendChild(t);};
+  tag(yF(tp)-6,'TP $64,884','#00ffa3');
+  tag(yF(entry)-6,'ENTRADA $63,627','#fff');
+  tag(yF(sl)+12,'SL $62,998','#ff2d74');
+})();
+</script>
+</body>
+</html>

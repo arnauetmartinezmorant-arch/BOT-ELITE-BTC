@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview · Tema PROFESIONAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0a0e14; --bg2:#0e131c; --panel:#101722; --line:#1c2632; --line2:#243040;
+    --tx:#e6edf3; --tx2:#9fb0c3; --tx3:#5f7185;
+    --accent:#2f6df6; --up:#26a69a; --down:#ef5350; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  .ribbon{font-size:12px;letter-spacing:.5px;color:var(--tx3);text-transform:uppercase;margin-bottom:10px}
+  /* top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#0f1620,#0c1119);border:1px solid var(--line);border-radius:10px;padding:14px 18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#1b2735,#0e1620);border:1px solid var(--line2);display:grid;place-items:center;font-weight:800;color:var(--accent)}
+  .brand h1{font-size:16px;font-weight:700;letter-spacing:-.2px}
+  .brand small{font-size:11px;color:var(--tx3)}
+  .price{ text-align:right}
+  .price .v{font-family:var(--mono);font-size:24px;font-weight:600}
+  .price .c{font-family:var(--mono);font-size:13px;color:var(--up)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);border:1px solid var(--line2);padding:5px 10px;border-radius:6px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up)}
+  /* controls */
+  .ctrl{display:flex;gap:22px;align-items:flex-end;margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;flex-wrap:wrap}
+  .lab{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);margin-bottom:7px}
+  .seg{display:inline-flex;gap:3px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--tx2);font:600 12px Inter;padding:7px 12px;border-radius:6px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seg.mode button.on{background:#16324f;color:#7fb4ff;border:1px solid #2f6df6}
+  /* layout */
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:14px;margin-top:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h2{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--tx2);border:1px solid var(--line2);padding:2px 7px;border-radius:5px}
+  .legend{font-family:var(--mono);font-size:11px;color:var(--tx2);display:flex;gap:14px}
+  svg{display:block;width:100%;height:330px}
+  /* signal */
+  .sig{border:1px solid #20415f;border-radius:10px;padding:16px;background:linear-gradient(180deg,rgba(38,166,154,.08),transparent)}
+  .sig .dir{font-size:26px;font-weight:800;color:var(--up);letter-spacing:.5px}
+  .sig .sub{font-size:12px;color:var(--tx2);margin-bottom:12px}
+  .bar{height:6px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:10px 0 14px}
+  .bar i{display:block;height:100%;width:74%;background:var(--up)}
+  .lv{display:flex;justify-content:space-between;padding:9px 11px;background:var(--bg2);border:1px solid var(--line);border-radius:7px;margin-bottom:5px}
+  .lv span{font-size:12px;color:var(--tx2)} .lv b{font-family:var(--mono);font-size:14px}
+  .lv.sl b{color:var(--down)} .lv.tp b{color:var(--up)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+  .st{background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:9px;text-align:center}
+  .st small{display:block;font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:3px}
+  .st b{font-family:var(--mono);font-size:14px}
+  .inds{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+  .ind{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:11px}
+  .ind .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .ind .n{font-size:11px;color:var(--tx2);font-weight:600}
+  .ind .s{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px}
+  .s.b{background:rgba(38,166,154,.15);color:var(--up)} .s.r{background:rgba(239,83,80,.15);color:var(--down)} .s.n{background:rgba(159,176,195,.12);color:var(--tx2)}
+  .ind .v{font-family:var(--mono);font-size:17px;font-weight:600}
+  .foot{margin-top:16px;font-size:11px;color:var(--tx3);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ribbon">Vista previa — Tema 1: Profesional (terminal institucional)</div>
+
+  <div class="top">
+    <div class="brand">
+      <div class="mark">₿</div>
+      <div><h1>BTC Quant Terminal</h1><small>Análisis algorítmico · multi-temporalidad</small></div>
+    </div>
+    <div class="price"><div class="v">$63,627.19</div><div class="c">+1.24% · 24h</div></div>
+    <div class="pill"><span class="dot"></span> En vivo · streaming</div>
+  </div>
+
+  <div class="ctrl">
+    <div><div class="lab">Temporalidad</div>
+      <div class="seg"><button>15m</button><button class="on">1H</button><button>4H</button><button>1D</button><button>1W</button></div></div>
+    <div><div class="lab">Modo de riesgo</div>
+      <div class="seg mode"><button class="on">Conservador</button><button>★ Premium</button></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Gráfico de velas <span class="tag">1H</span>
+        <span class="legend"><span style="color:#e0a64a">EMA21</span><span style="color:#2f6df6">EMA50</span></span></h2>
+      <svg id="chart" viewBox="0 0 860 330" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="card">
+      <h2>Señal del bot <span class="tag">14:32</span></h2>
+      <div class="sig">
+        <div class="dir">LONG ▲</div>
+        <div class="sub">Confluencia alcista · Conservador · 7/9 indicadores</div>
+        <div class="bar"><i></i></div>
+        <div class="lv"><span>Entrada</span><b>$63,627.19</b></div>
+        <div class="lv sl"><span>Stop Loss</span><b>$62,998.49</b></div>
+        <div class="lv tp"><span>TP 1</span><b>$64,255.89</b></div>
+        <div class="lv tp"><span>TP 2 · 2:1</span><b>$64,884.59</b></div>
+        <div class="stats">
+          <div class="st"><small>R/B</small><b>2:1</b></div>
+          <div class="st"><small>Riesgo</small><b>0.99%</b></div>
+          <div class="st"><small>Convicción</small><b>74%</b></div>
+        </div>
+      </div>
+      <div class="inds">
+        <div class="ind"><div class="h"><span class="n">RSI</span><span class="s b">Alcista</span></div><div class="v">58.4</div></div>
+        <div class="ind"><div class="h"><span class="n">MACD</span><span class="s b">Alcista</span></div><div class="v">+42</div></div>
+        <div class="ind"><div class="h"><span class="n">ADX</span><span class="s b">Fuerte</span></div><div class="v">28</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Maqueta visual · datos de ejemplo · solo para previsualizar el estilo</div>
+</div>
+<script>
+(function(){
+  const UP='#26a69a',DOWN='#ef5350';
+  const svg=document.getElementById('chart');const ns='http://www.w3.org/2000/svg';
+  const W=860,H=330,pad=14,N=48;
+  let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  let p=62200;const ks=[];
+  for(let i=0;i<N;i++){const drift=i<N-7?0.0045:-0.007;const ret=drift+(rnd()-0.5)*0.011;const o=p,c=Math.max(1,o*(1+ret));ks.push({o,c,h:Math.max(o,c)*(1+rnd()*0.005),l:Math.min(o,c)*(1-rnd()*0.005)});p=c;}
+  const lo=Math.min(...ks.map(k=>k.l)),hi=Math.max(...ks.map(k=>k.h));
+  const plotW=W*0.62,cw=plotW/N;
+  const yF=v=>pad+(hi-v)/(hi-lo)*(H-2*pad);
+  // moving averages
+  const closes=ks.map(k=>k.c);const ma=(per)=>closes.map((_,i)=>{if(i<per-1)return null;let s=0;for(let j=i-per+1;j<=i;j++)s+=closes[j];return s/per;});
+  const draw=(arr,col)=>{let d='';arr.forEach((v,i)=>{if(v==null)return;const x=i*cw+cw/2;d+=(d?'L':'M')+x+' '+yF(v);});const pl=document.createElementNS(ns,'path');pl.setAttribute('d',d);pl.setAttribute('fill','none');pl.setAttribute('stroke',col);pl.setAttribute('stroke-width',1.5);svg.appendChild(pl);};
+  ks.forEach((k,i)=>{const x=i*cw+cw/2;const up=k.c>=k.o;const col=up?UP:DOWN;
+    const w=document.createElementNS(ns,'line');w.setAttribute('x1',x);w.setAttribute('x2',x);w.setAttribute('y1',yF(k.h));w.setAttribute('y2',yF(k.l));w.setAttribute('stroke',col);svg.appendChild(w);
+    const r=document.createElementNS(ns,'rect');const bt=yF(Math.max(k.o,k.c)),bb=yF(Math.min(k.o,k.c));r.setAttribute('x',x-cw*0.32);r.setAttribute('width',cw*0.64);r.setAttribute('y',bt);r.setAttribute('height',Math.max(1,bb-bt));r.setAttribute('fill',col);svg.appendChild(r);});
+  draw(ma(21),'#e0a64a');draw(ma(50),'#2f6df6');
+  // trade position box (LONG) on the right
+  const last=ks[N-1].c,entry=last,sl=last*0.99,tp=last*1.018;
+  const bx=plotW+6,bw=W-bx-92;
+  const box=(yA,yB,fill,stroke)=>{const r=document.createElementNS(ns,'rect');r.setAttribute('x',bx);r.setAttribute('width',bw);r.setAttribute('y',Math.min(yA,yB));r.setAttribute('height',Math.abs(yB-yA));r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);svg.appendChild(r);};
+  box(yF(entry),yF(tp),'rgba(38,166,154,.16)','rgba(38,166,154,.5)');
+  box(yF(entry),yF(sl),'rgba(239,83,80,.16)','rgba(239,83,80,.5)');
+  const line=document.createElementNS(ns,'line');line.setAttribute('x1',bx);line.setAttribute('x2',bx+bw);line.setAttribute('y1',yF(entry));line.setAttribute('y2',yF(entry));line.setAttribute('stroke','#cdd9e5');line.setAttribute('stroke-dasharray','4 3');svg.appendChild(line);
+  const tag=(y,txt,fill,tc)=>{const g=document.createElementNS(ns,'g');const t=document.createElementNS(ns,'text');t.textContent=txt;t.setAttribute('x',W-6);t.setAttribute('y',y+3);t.setAttribute('text-anchor','end');t.setAttribute('font-family',"'IBM Plex Mono',monospace");t.setAttribute('font-size','10');t.setAttribute('font-weight','700');t.setAttribute('fill',tc);g.appendChild(t);svg.appendChild(g);};
+  tag(yF(tp)-6,'TP $64,884',null,'#26a69a');
+  tag(yF(entry)-6,'Entrada $63,627',null,'#cdd9e5');
+  tag(yF(sl)+12,'SL $62,998',null,'#ef5350');
+})();
+</script>
+</body>
+</html>
