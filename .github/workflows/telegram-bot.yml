@@ -41,5 +41,5 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_CONSERVADOR: ${{ secrets.TELEGRAM_CHAT_CONSERVADOR }}
           TELEGRAM_CHAT_PREMIUM: ${{ secrets.TELEGRAM_CHAT_PREMIUM }}
-          TIMEFRAMES: '15m,1h,4h'
+          TIMEFRAMES: '5m,15m,1h,4h'
         run: node server/index.js
