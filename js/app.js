@@ -191,28 +191,53 @@ function renderChartLive() {
 /* ---------------------- themes ---------------------- */
 const THEMES = {
   futuristic: { up: '#00ffa3', down: '#ff2d74', ema21: '#22e3ff', ema50: '#ff3df0', ema200: '#c4d3f5' },
-  gold:       { up: '#4cc38a', down: '#e0573e', ema21: '#d4af37', ema50: '#b08d57', ema200: '#f3ead2' },
+  neon:       { up: '#00ffa3', down: '#ff2bd6', ema21: '#00e5ff', ema50: '#ff2bd6', ema200: '#dCe9ff' },
 };
 let themeColors = THEMES.futuristic;
+let neonTimer = null;
+let neonHue = 188;
+
+function applyChartColors() {
+  if (!candleSeries) return;
+  candleSeries.applyOptions({
+    upColor: themeColors.up, downColor: themeColors.down,
+    borderUpColor: themeColors.up, borderDownColor: themeColors.down,
+    wickUpColor: themeColors.up, wickDownColor: themeColors.down,
+  });
+  ema21Series.applyOptions({ color: themeColors.ema21 });
+  ema50Series.applyOptions({ color: themeColors.ema50 });
+  ema200Series.applyOptions({ color: themeColors.ema200 });
+  if (state.ind) renderLegend();
+}
+
+/** Cycle the chart colors (candles + EMAs) to match the neon theme. */
+function startNeonChart() {
+  if (neonTimer) return;
+  neonTimer = setInterval(() => {
+    neonHue = (neonHue + 11) % 360;
+    const h2 = (neonHue + 150) % 360;
+    themeColors = {
+      up: `hsl(${neonHue},100%,60%)`, down: `hsl(${h2},100%,63%)`,
+      ema21: `hsl(${neonHue},100%,66%)`, ema50: `hsl(${h2},100%,67%)`, ema200: '#dce9ff',
+    };
+    applyChartColors();
+  }, 350);
+}
+function stopNeonChart() { if (neonTimer) { clearInterval(neonTimer); neonTimer = null; } }
 
 function applyTheme(name) {
   if (!THEMES[name]) name = 'futuristic';
-  themeColors = THEMES[name];
-  document.body.classList.remove('theme-gold', 'theme-futuristic');
+  document.body.classList.remove('theme-futuristic', 'theme-neon');
   document.body.classList.add('theme-' + name);
   try { localStorage.setItem('btcQuantTheme', name); } catch (e) {}
   document.querySelectorAll('#themeSelector .tf-btn').forEach((b) => b.classList.toggle('active', b.dataset.theme === name));
-  if (candleSeries) {
-    candleSeries.applyOptions({
-      upColor: themeColors.up, downColor: themeColors.down,
-      borderUpColor: themeColors.up, borderDownColor: themeColors.down,
-      wickUpColor: themeColors.up, wickDownColor: themeColors.down,
-    });
-    ema21Series.applyOptions({ color: themeColors.ema21 });
-    ema50Series.applyOptions({ color: themeColors.ema50 });
-    ema200Series.applyOptions({ color: themeColors.ema200 });
+  if (name === 'neon') {
+    startNeonChart();          // chart colors cycle on a timer
+  } else {
+    stopNeonChart();
+    themeColors = THEMES[name];
+    applyChartColors();
   }
-  if (state.ind) renderLegend();
 }
 
 function renderLegend() {
@@ -912,7 +937,7 @@ function bindControls() {
   // prime audio + notifications on first interaction anywhere
   window.addEventListener('pointerdown', primeAudio, { once: true });
 
-  // theme selector (Gold / Futurista)
+  // theme selector (Futurista / Neón)
   $('themeSelector').addEventListener('click', (e) => {
     const btn = e.target.closest('.tf-btn');
     if (!btn) return;

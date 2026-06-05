@@ -427,28 +427,42 @@ body.theme-futuristic .trade-box.sl { background: rgba(255,45,116,0.14); border-
 body.theme-futuristic .trade-tag.tp { background: rgba(0,255,163,0.92); color: #021a12; }
 body.theme-futuristic .trade-tag.sl { background: rgba(255,45,116,0.92); color: #fff; }
 
-/* ---------- 🥇 GOLD (oro de lujo) ---------- */
-body.theme-gold {
-  --bg-0: #0b0a07; --bg-1: #100e08; --bg-2: #15130c;
-  --panel: linear-gradient(180deg, rgba(21,19,12,0.92), rgba(16,14,8,0.92));
-  --panel-solid: #15130c;
-  --border: rgba(212,175,55,0.18); --border-strong: rgba(212,175,55,0.38);
-  --text-0: #f3ead2; --text-1: #ddd0ad; --text-2: #bcae8e; --text-3: #897c5e;
-  --accent: #d4af37; --accent-2: #b08d57;
-  --long: #4cc38a; --long-dim: rgba(76,195,138,0.14);
-  --short: #e0573e; --short-dim: rgba(224,87,62,0.14);
-  --glow-long: 0 0 22px rgba(76,195,138,0.30); --glow-short: 0 0 22px rgba(224,87,62,0.30);
-  background:
-    radial-gradient(900px 480px at 85% -10%, rgba(212,175,55,0.16), transparent 60%),
-    radial-gradient(800px 600px at 8% 0%, rgba(176,141,87,0.10), transparent 55%),
-    #0b0a07;
+/* ---------- 🌈 NEÓN (colores cambiantes) ---------- */
+@property --neon  { syntax: '<color>'; inherits: true; initial-value: #00e5ff; }
+@property --neon2 { syntax: '<color>'; inherits: true; initial-value: #ff2bd6; }
+@keyframes neoncyc {
+  0%   { --neon: #00e5ff; --neon2: #ff2bd6; }
+  20%  { --neon: #7c4dff; --neon2: #00ffa3; }
+  40%  { --neon: #ff2bd6; --neon2: #00e5ff; }
+  60%  { --neon: #00ffa3; --neon2: #7c4dff; }
+  80%  { --neon: #ffd23f; --neon2: #ff5db1; }
+  100% { --neon: #00e5ff; --neon2: #ff2bd6; }
 }
-body.theme-gold .topbar { background: linear-gradient(180deg, rgba(24,21,12,0.95), rgba(14,12,7,0.85)); }
-body.theme-gold .tf-btn.active { background: linear-gradient(135deg, #f5d27a, #b08d57); color: #1a1405; box-shadow: 0 4px 14px rgba(212,175,55,0.35); }
-body.theme-gold #riskSelector .tf-btn.active,
-body.theme-gold #themeSelector .tf-btn.active { background: linear-gradient(135deg, #f5d27a, #b08d57); color: #1a1405; box-shadow: 0 4px 14px rgba(212,175,55,0.35); }
-body.theme-gold .trade-box.tp { background: rgba(76,195,138,0.13); border-color: rgba(76,195,138,0.5); }
-body.theme-gold .trade-box.sl { background: rgba(224,87,62,0.13); border-color: rgba(224,87,62,0.5); }
-body.theme-gold .trade-tag.tp { background: rgba(76,195,138,0.92); color: #03160d; }
-body.theme-gold .trade-tag.sl { background: rgba(224,87,62,0.92); color: #fff; }
-body.theme-gold .trade-tag.entry { background: rgba(245,210,122,0.95); color: #1a1405; }
+body.theme-neon {
+  animation: neoncyc 11s linear infinite;
+  --bg-0: #04030d; --bg-1: #08081a; --bg-2: #0d0d22;
+  --panel: color-mix(in srgb, var(--neon) 5%, rgba(8,8,22,0.55)); --panel-solid: #0b0b1e;
+  --border: color-mix(in srgb, var(--neon) 22%, transparent);
+  --border-strong: color-mix(in srgb, var(--neon) 40%, transparent);
+  --text-0: #eaf2ff; --text-1: #c4d3f5; --text-2: #9fb0d6; --text-3: #6c7aa3;
+  --accent: var(--neon); --accent-2: var(--neon2);
+  --long: var(--neon); --long-dim: color-mix(in srgb, var(--neon) 14%, transparent);
+  --short: var(--neon2); --short-dim: color-mix(in srgb, var(--neon2) 14%, transparent);
+  --glow-long: 0 0 26px color-mix(in srgb, var(--neon) 55%, transparent);
+  --glow-short: 0 0 26px color-mix(in srgb, var(--neon2) 55%, transparent);
+  background:
+    radial-gradient(900px 520px at 85% -10%, color-mix(in srgb, var(--neon2) 22%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 8% 0%, color-mix(in srgb, var(--neon) 20%, transparent), transparent 55%),
+    radial-gradient(700px 520px at 50% 115%, color-mix(in srgb, var(--neon) 16%, transparent), transparent 60%),
+    #04030d;
+}
+body.theme-neon .topbar { background: color-mix(in srgb, var(--neon) 6%, rgba(8,8,22,0.7)); }
+body.theme-neon .panel, body.theme-neon .controls, body.theme-neon .topbar { box-shadow: 0 0 28px color-mix(in srgb, var(--neon) 14%, transparent); }
+body.theme-neon .tf-btn.active { background: linear-gradient(135deg, var(--neon), var(--neon2)); color: #04030d; box-shadow: 0 0 18px var(--neon); }
+body.theme-neon #riskSelector .tf-btn.active,
+body.theme-neon #themeSelector .tf-btn.active { background: linear-gradient(135deg, var(--neon2), var(--neon)); color: #04030d; box-shadow: 0 0 18px var(--neon2); }
+body.theme-neon .tag { background: color-mix(in srgb, var(--neon) 16%, transparent); color: var(--neon); }
+body.theme-neon .trade-box.tp { background: color-mix(in srgb, var(--neon) 14%, transparent); border-color: color-mix(in srgb, var(--neon) 60%, transparent); }
+body.theme-neon .trade-box.sl { background: color-mix(in srgb, var(--neon2) 14%, transparent); border-color: color-mix(in srgb, var(--neon2) 60%, transparent); }
+body.theme-neon .trade-tag.tp { background: var(--neon); color: #04030d; }
+body.theme-neon .trade-tag.sl { background: var(--neon2); color: #04030d; }
