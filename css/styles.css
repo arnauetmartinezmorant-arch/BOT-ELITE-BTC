@@ -401,7 +401,7 @@ body {
 
 /* ---------- 🛸 FUTURISTA (neón / holográfico) ---------- */
 body.theme-futuristic {
-  --bg-0: #04030f; --bg-1: #0a0a18; --bg-2: #10102408;
+  --bg-0: #04030f; --bg-1: #0a0a18; --bg-2: #101024;
   --panel: rgba(120,150,255,0.06); --panel-solid: #0c0c1c;
   --border: rgba(140,170,255,0.18); --border-strong: rgba(140,170,255,0.34);
   --text-0: #eaf2ff; --text-1: #c4d3f5; --text-2: #8ea0c9; --text-3: #62709a;
@@ -427,19 +427,9 @@ body.theme-futuristic .trade-box.sl { background: rgba(255,45,116,0.14); border-
 body.theme-futuristic .trade-tag.tp { background: rgba(0,255,163,0.92); color: #021a12; }
 body.theme-futuristic .trade-tag.sl { background: rgba(255,45,116,0.92); color: #fff; }
 
-/* ---------- 🌈 NEÓN (colores cambiantes) ---------- */
-@property --neon  { syntax: '<color>'; inherits: true; initial-value: #00e5ff; }
-@property --neon2 { syntax: '<color>'; inherits: true; initial-value: #ff2bd6; }
-@keyframes neoncyc {
-  0%   { --neon: #00e5ff; --neon2: #ff2bd6; }
-  20%  { --neon: #7c4dff; --neon2: #00ffa3; }
-  40%  { --neon: #ff2bd6; --neon2: #00e5ff; }
-  60%  { --neon: #00ffa3; --neon2: #7c4dff; }
-  80%  { --neon: #ffd23f; --neon2: #ff5db1; }
-  100% { --neon: #00e5ff; --neon2: #ff2bd6; }
-}
+/* ---------- 🌈 NEÓN (colores cambiantes — animado por JS para que funcione en todos los navegadores) ---------- */
 body.theme-neon {
-  animation: neoncyc 11s linear infinite;
+  --neon: #00e5ff; --neon2: #ff2bd6;   /* valores base; el JS los va rotando en vivo */
   --bg-0: #04030d; --bg-1: #08081a; --bg-2: #0d0d22;
   --panel: color-mix(in srgb, var(--neon) 5%, rgba(8,8,22,0.55)); --panel-solid: #0b0b1e;
   --border: color-mix(in srgb, var(--neon) 22%, transparent);

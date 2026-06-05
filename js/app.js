@@ -210,20 +210,29 @@ function applyChartColors() {
   if (state.ind) renderLegend();
 }
 
-/** Cycle the chart colors (candles + EMAs) to match the neon theme. */
+/** Cycle neon colors across the WHOLE UI (via CSS vars) + the chart. */
 function startNeonChart() {
   if (neonTimer) return;
-  neonTimer = setInterval(() => {
-    neonHue = (neonHue + 11) % 360;
+  const tick = () => {
+    neonHue = (neonHue + 4) % 360;
     const h2 = (neonHue + 150) % 360;
-    themeColors = {
-      up: `hsl(${neonHue},100%,60%)`, down: `hsl(${h2},100%,63%)`,
-      ema21: `hsl(${neonHue},100%,66%)`, ema50: `hsl(${h2},100%,67%)`, ema200: '#dce9ff',
-    };
+    const c1 = `hsl(${neonHue},100%,60%)`;
+    const c2 = `hsl(${h2},100%,63%)`;
+    // drive the UI colors (works in every browser, no @property needed)
+    document.body.style.setProperty('--neon', c1);
+    document.body.style.setProperty('--neon2', c2);
+    // drive the chart canvas (candles + EMAs)
+    themeColors = { up: c1, down: c2, ema21: `hsl(${neonHue},100%,66%)`, ema50: `hsl(${h2},100%,67%)`, ema200: '#dce9ff' };
     applyChartColors();
-  }, 350);
+  };
+  tick();
+  neonTimer = setInterval(tick, 130);
 }
-function stopNeonChart() { if (neonTimer) { clearInterval(neonTimer); neonTimer = null; } }
+function stopNeonChart() {
+  if (neonTimer) { clearInterval(neonTimer); neonTimer = null; }
+  document.body.style.removeProperty('--neon');
+  document.body.style.removeProperty('--neon2');
+}
 
 function applyTheme(name) {
   if (!THEMES[name]) name = 'futuristic';
