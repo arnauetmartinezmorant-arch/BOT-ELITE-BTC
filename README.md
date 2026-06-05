@@ -145,8 +145,9 @@ Súbelo a **Render** o **Railway** como *Background Worker / Service*:
 - Variables de entorno: las de arriba
 
 ### 🆓 Alternativa 100% gratis con GitHub Actions
-El repo incluye `.github/workflows/telegram-bot.yml`, que escanea el mercado **cada 30
-minutos** desde los servidores de GitHub (sin coste). Para activarlo:
+El repo incluye `.github/workflows/telegram-bot.yml`, que escanea el mercado **cada 5
+minutos** (el mínimo que permite GitHub Actions) desde los servidores de GitHub (sin
+coste). Para activarlo:
 
 1. En tu repo de GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
    Crea estos secretos (sin comillas):
@@ -155,8 +156,10 @@ minutos** desde los servidores de GitHub (sin coste). Para activarlo:
    - `TELEGRAM_CHAT_PREMIUM`
 2. Ve a la pestaña **Actions**, acepta activar los workflows, y abre
    *"BTC Quant · Bot de Telegram (gratis)"* → **Run workflow** para probarlo al instante.
-3. A partir de ahí corre solo cada 30 min. El estado se guarda en la caché de Actions,
-   así que **no repite la misma señal** (solo avisa cuando cambia: p. ej. de nada a LONG).
+3. A partir de ahí corre solo cada 5 min. El estado se guarda en la caché de Actions,
+   así que **no repite la misma señal** y **sigue cada operación abierta** entre
+   ejecuciones (avisa de la entrada y luego de TP1/TP2/Stop Loss/break-even o si la
+   señal se invalida).
 
 > Notas: GitHub puede retrasar algún ciclo en horas punta; los workflows programados se
 > pausan tras ~60 días sin actividad en el repo (entra y reactívalos). Para repos
@@ -175,6 +178,22 @@ alineados.
 
 > ⚠️ Solo envía señales con **datos reales**; si la API de mercado no está disponible
 > ese ciclo se omite (no inventa señales).
+
+### 🔔 Avisos durante toda la operación
+Tras enviarte una entrada, el bot **sigue esa operación** y te avisa en su canal de
+cada hito (basándose en máximos/mínimos de velas cerradas, sin repintado):
+
+| Evento | Mensaje | Resultado |
+|--------|---------|-----------|
+| 🎯 **TP1 (1:1)** | objetivo parcial alcanzado | +1R · stop movido a **break-even** |
+| 🏁 **TP2 (2:1)** | objetivo final alcanzado | +2R · **cierre con beneficio** |
+| 🛑 **Stop Loss** | se tocó el stop | −1R · **cierre** |
+| ⚖️ **Break-even** | volvió a la entrada tras el TP1 | 0R · **cierre sin pérdidas** |
+| 🔄 **Cambio de señal** | la confluencia ya no acompaña | **cierre sugerido** |
+
+> ⚠️ El bot **no está conectado a tu cuenta del exchange**: sigue el ciclo de vida de
+> las operaciones que **él mismo** propone (precio vs. SL/TP), no las que cierres tú
+> manualmente en tu broker.
 
 ---
 

@@ -27,3 +27,57 @@ export function formatSignal(mode, tf, s) {
     '<i>⚠️ No es asesoramiento financiero. Gestiona tu riesgo.</i>',
   ].join('\n');
 }
+
+/**
+ * Message for a lifecycle event of an OPEN trade the bot is tracking.
+ * ev.type: 'tp1' | 'tp2' | 'sl' | 'be'
+ */
+export function formatExit(mode, tf, trade, ev) {
+  const dirTxt = trade.dir === 'long' ? 'LONG' : 'SHORT';
+  const head = `${MODE_EMOJI[mode] || ''} <b>BTC/USDT · ${tf.toUpperCase()} · ${dirTxt}</b>`;
+  const lines = [head, ''];
+
+  if (ev.type === 'tp1') {
+    lines.push(
+      '🎯 <b>TP1 alcanzado (1:1)</b> · +1R',
+      `Precio: <code>${fmt(ev.price)}</code>`,
+      'Stop movido a <b>break-even</b> (entrada): operación sin riesgo. 🔒',
+    );
+  } else if (ev.type === 'tp2') {
+    lines.push(
+      '🏁 <b>TP2 alcanzado (2:1)</b> · +2R ✅',
+      `Precio: <code>${fmt(ev.price)}</code>`,
+      'Operación <b>CERRADA con beneficio</b>. 🎉',
+    );
+  } else if (ev.type === 'sl') {
+    lines.push(
+      '🛑 <b>Stop Loss alcanzado</b> · −1R',
+      `Precio: <code>${fmt(ev.price)}</code>`,
+      'Operación <b>CERRADA</b>. A por la siguiente. 💪',
+    );
+  } else if (ev.type === 'be') {
+    lines.push(
+      '⚖️ <b>Salida en break-even</b> · 0R',
+      `Precio: <code>${fmt(ev.price)}</code>`,
+      'El precio volvió a la entrada tras el TP1. Operación <b>CERRADA sin pérdidas</b>.',
+    );
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Message when the live signal flips against an open trade (manual/auto
+ * close): the confluence no longer supports the position.
+ * newDir: 'long' | 'short' | 'none'
+ */
+export function formatReversal(mode, tf, trade, newDir) {
+  const dirTxt = trade.dir === 'long' ? 'LONG' : 'SHORT';
+  const newTxt = newDir === 'long' ? '🟢 LONG' : newDir === 'short' ? '🔴 SHORT' : '⏸ SIN TRADE';
+  return [
+    `${MODE_EMOJI[mode] || ''} <b>BTC/USDT · ${tf.toUpperCase()} · ${dirTxt}</b>`,
+    '',
+    '🔄 <b>Señal invalidada · cambio de dirección</b>',
+    `La confluencia ya no respalda la operación ${dirTxt}. Nuevo estado: <b>${newTxt}</b>.`,
+    'Cierre sugerido de la posición abierta.',
+  ].join('\n');
+}
