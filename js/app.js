@@ -151,14 +151,15 @@ function drawHeatmap() {
   const bandPx = Math.abs((yBot - yTop) / Math.max(1, hm.bins.length)) + 1.2;
 
   for (const b of hm.bins) {
-    const t = b.weight / hm.max;                 // 0..1 intensity
-    if (t < 0.04) continue;
+    const raw = b.weight / hm.max;                 // 0..1 intensity
+    if (raw < 0.03) continue;
+    const t = Math.pow(raw, 0.72);                 // gamma: make mid/high bands pop
     const yc = candleSeries.priceToCoordinate(b.price);
     if (yc == null) continue;
     let x0 = 0;
     try { const xc = ts.timeToCoordinate(b.startTime); if (xc != null && xc > 0) x0 = xc; } catch (e) {}
     const { r, g, b: bb } = heatmapColor(t);
-    const alpha = Math.min(0.82, 0.06 + t * 0.78);
+    const alpha = Math.min(0.88, 0.05 + t * 0.85);
     ctx.fillStyle = `rgba(${r},${g},${bb},${alpha})`;
     ctx.fillRect(x0, yc - bandPx / 2, paneW - x0, bandPx);
   }

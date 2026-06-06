@@ -21,7 +21,9 @@ const TIERS = [
   { L: 20, w: 1.15 },
   { L: 25, w: 1.3 },
   { L: 50, w: 1.55 },
+  { L: 75, w: 1.7 },
   { L: 100, w: 1.9 },
+  { L: 125, w: 2.1 },
 ];
 
 /**
@@ -43,13 +45,12 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
   const pad = opts.pad != null ? opts.pad : 0.12;
   const priceMin = lo * (1 - pad);
   const priceMax = hi * (1 + pad);
-  const nBins = opts.bins || 170;
+  const nBins = opts.bins || 200;
   const binSize = (priceMax - priceMin) / nBins;
   if (binSize <= 0) return empty;
 
   const weights = new Float64Array(nBins);
-  const startTimes = new Float64Array(nBins);
-  const bestContrib = new Float64Array(nBins);   // strongest single contribution → band start
+  const startTimes = new Float64Array(nBins);   // earliest candle that formed the level
   startTimes.fill(0);
 
   const idxOf = (price) => Math.floor((price - priceMin) / binSize);
@@ -59,6 +60,8 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
   for (const c of candles) { const v = c.volume || (c.high - c.low); if (v > 0) { volSum += v; volCount++; } }
   const avgVol = volCount ? volSum / volCount : 1;
 
+  // iterate oldest → newest so the FIRST contribution to a bin marks when that
+  // liquidity formed (the band then extends to the right edge, Coinglass-style)
   for (let i = 0; i < n; i++) {
     const c = candles[i];
     const recency = 0.3 + 0.7 * (i / (n - 1));            // recent candles weigh more
@@ -74,7 +77,7 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
         const bi = idxOf(lvl);
         if (bi < 0 || bi >= nBins) continue;
         weights[bi] += contrib;
-        if (contrib > bestContrib[bi]) { bestContrib[bi] = contrib; startTimes[bi] = c.time; }
+        if (startTimes[bi] === 0) startTimes[bi] = c.time;   // first time it formed
       }
     }
   }
