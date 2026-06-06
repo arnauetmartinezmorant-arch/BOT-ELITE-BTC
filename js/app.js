@@ -9,7 +9,8 @@ import { setAlertsEnabled, primeAudio, playAlertSound, requestNotifyPermission, 
 import { getTrades, addTrade, resolveTrade, deleteTrade, clearAll, getStats, liveR } from './journal.js';
 import { detectLiquidity } from './liquidity.js';
 import { fetchNews, aggregateSentiment } from './news.js';
-import { createLiquidationFeed, estimateLiquidationLevels } from './liquidations.js';
+import { createLiquidationFeed } from './liquidations.js';
+import { computeLiquidationHeatmap, heatmapColor } from './heatmap.js';
 
 const LWC = window.LightweightCharts;
 
@@ -38,7 +39,7 @@ const state = {
   newsFilter: 'all',
   newsAlerts: (() => { try { return localStorage.getItem('btc_news_alerts') !== '0'; } catch (e) { return true; } })(),
   liquidations: { events: [], totalLong: 0, totalShort: 0, alive: false },
-  liqLevels: [],
+  heatmap: null,
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -47,9 +48,11 @@ let chart, candleSeries, ema21Series, ema50Series, ema200Series;
 let priceLines = [];
 let liqLines = [];
 let liqSig = '';
-let liqLevelLines = [];
-let liqLevelSig = '';
 let liqFeed = null;
+let heatmapCanvas = null;
+let heatmapCtx = null;
+let heatmapSig = '';
+let heatmapLastCandleTime = 0;
 let refreshTimer = null;
 let tickerTimer = null;
 
@@ -89,9 +92,76 @@ function initChart() {
 
   // overlay layer for the TradingView-style position box (green/red zones)
   buildTradeOverlay();
+  buildHeatmapCanvas();
   // Reposition every animation frame so the boxes track price on pan AND zoom.
-  const overlayLoop = () => { updateTradeOverlay(); requestAnimationFrame(overlayLoop); };
+  const overlayLoop = () => { updateTradeOverlay(); drawHeatmap(); requestAnimationFrame(overlayLoop); };
   requestAnimationFrame(overlayLoop);
+}
+
+/* ---------------------- liquidation heatmap canvas ---------------------- */
+function buildHeatmapCanvas() {
+  const host = $('chart');
+  heatmapCanvas = document.createElement('canvas');
+  heatmapCanvas.className = 'liq-heatmap';
+  // sits BEHIND the candles (chart background is transparent)
+  host.insertBefore(heatmapCanvas, host.firstChild);
+  heatmapCtx = heatmapCanvas.getContext('2d');
+}
+
+/**
+ * Paint the liquidation heatmap. Bands are anchored to fixed PRICE levels
+ * (computed from history) and only follow the chart's pan/zoom via
+ * priceToCoordinate — they never drift with the live price.
+ */
+function drawHeatmap() {
+  if (!heatmapCanvas || !heatmapCtx) return;
+  const host = $('chart');
+  const W = host.clientWidth;
+  const H = host.clientHeight;
+  const hm = state.heatmap;
+  const show = state.showLiquidations && hm && hm.bins && hm.bins.length && hm.max > 0;
+
+  // keep canvas pixel size in sync with the container (DPR-aware)
+  const dpr = window.devicePixelRatio || 1;
+  if (heatmapCanvas.width !== Math.round(W * dpr) || heatmapCanvas.height !== Math.round(H * dpr)) {
+    heatmapCanvas.width = Math.round(W * dpr);
+    heatmapCanvas.height = Math.round(H * dpr);
+    heatmapCanvas.style.width = W + 'px';
+    heatmapCanvas.style.height = H + 'px';
+    heatmapSig = '';   // force redraw after resize
+  }
+
+  if (!show) { heatmapCtx.clearRect(0, 0, heatmapCanvas.width, heatmapCanvas.height); return; }
+
+  const paneW = Math.max(40, W - priceScaleWidth());
+  const yTop = candleSeries.priceToCoordinate(hm.priceMax);
+  const yBot = candleSeries.priceToCoordinate(hm.priceMin);
+  if (yTop == null || yBot == null) return;
+
+  // redraw only when something visibly changed (perf): size + price mapping + data
+  const sig = `${W}x${H}:${yTop.toFixed(1)}:${yBot.toFixed(1)}:${hm.bins.length}:${hm.max.toFixed(2)}`;
+  if (sig === heatmapSig) return;
+  heatmapSig = sig;
+
+  const ctx = heatmapCtx;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const ts = chart.timeScale();
+  const bandPx = Math.abs((yBot - yTop) / Math.max(1, hm.bins.length)) + 1.2;
+
+  for (const b of hm.bins) {
+    const t = b.weight / hm.max;                 // 0..1 intensity
+    if (t < 0.04) continue;
+    const yc = candleSeries.priceToCoordinate(b.price);
+    if (yc == null) continue;
+    let x0 = 0;
+    try { const xc = ts.timeToCoordinate(b.startTime); if (xc != null && xc > 0) x0 = xc; } catch (e) {}
+    const { r, g, b: bb } = heatmapColor(t);
+    const alpha = Math.min(0.82, 0.06 + t * 0.78);
+    ctx.fillStyle = `rgba(${r},${g},${bb},${alpha})`;
+    ctx.fillRect(x0, yc - bandPx / 2, paneW - x0, bandPx);
+  }
 }
 
 /* ---------------------- trade position overlay ---------------------- */
@@ -183,8 +253,8 @@ function renderChart() {
   // don't fight with the S/R lines above)
   drawLiquidity(true);
 
-  // Coinglass-style liquidation levels + real-time liquidation markers
-  drawLiquidationLevels(true);
+  // real-time liquidation markers (anchored to candle times) + heatmap is
+  // painted by the rAF loop using fixed price levels
   rebuildLiqMarkers();
 
   if (!state._fitted) {
@@ -245,34 +315,7 @@ function drawLiquidity(force = false) {
   }
 }
 
-/* ---------------------- liquidation levels + markers on chart ---------------------- */
-function clearLiqLevelLines() {
-  liqLevelLines.forEach((pl) => { try { candleSeries.removePriceLine(pl); } catch (e) {} });
-  liqLevelLines = [];
-}
-
-/** Draw estimated leverage liquidation levels (long below / short above). */
-function drawLiquidationLevels(force = false) {
-  if (!candleSeries) return;
-  const levels = state.showLiquidations ? (state.liqLevels || []) : [];
-  const sig = levels.map((l) => `${l.side}${l.leverage}:${l.price}`).join('|') + ':' + state.showLiquidations;
-  if (!force && sig === liqLevelSig) return;
-  liqLevelSig = sig;
-  clearLiqLevelLines();
-  for (const l of levels) {
-    const isLong = l.side === 'long';
-    const alpha = 0.18 + l.intensity * 0.32;        // 100x most visible
-    liqLevelLines.push(candleSeries.createPriceLine({
-      price: l.price,
-      color: isLong ? `rgba(234,57,67,${alpha})` : `rgba(22,199,132,${alpha})`,
-      lineWidth: 1,
-      lineStyle: LWC.LineStyle.SparseDotted,
-      axisLabelVisible: true,
-      title: `🔥${l.leverage}x`,
-    }));
-  }
-}
-
+/* ---------------------- liquidation markers on chart ---------------------- */
 /** Snap a liquidation timestamp (ms) to a candle time on the current chart. */
 function snapToCandleTime(tsMs) {
   const arr = state.candles;
@@ -876,7 +919,9 @@ async function analyze(opts = {}) {
 
     state.signal = generateSignal(candles, state.ind, state.risk, mtfBias);
     state.liquidity = detectLiquidity(candles);
-    state.liqLevels = estimateLiquidationLevels(candles[candles.length - 1].close);
+    state.heatmap = computeLiquidationHeatmap(candles);
+    heatmapLastCandleTime = candles[candles.length - 1].time;
+    heatmapSig = '';   // force heatmap repaint for the new data
 
     renderChart();
     renderSignal();
@@ -1020,10 +1065,16 @@ function startRecomputeLoop() {
     state.ind = computeIndicators(state.candles);
     state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
     state.liquidity = detectLiquidity(state.candles);
-    state.liqLevels = estimateLiquidationLevels(state.livePrice || state.candles[state.candles.length - 1].close);
+    // recompute the heatmap ONLY when a new candle closes (anchored to price,
+    // so it must not jitter with every live tick)
+    const lastT = state.candles[state.candles.length - 1].time;
+    if (lastT !== heatmapLastCandleTime) {
+      state.heatmap = computeLiquidationHeatmap(state.candles);
+      heatmapLastCandleTime = lastT;
+      heatmapSig = '';
+    }
     renderChartLive();
     drawLiquidity();              // refresh chart lines only if pools changed
-    drawLiquidationLevels();      // refresh liquidation levels if price moved
     renderSignal();
     renderIndicators();
     renderPatterns();
@@ -1287,7 +1338,7 @@ function bindControls() {
   $('toggleEMA').addEventListener('change', (e) => { state.showEMA = e.target.checked; renderChart(); });
   $('toggleLevels').addEventListener('change', (e) => { state.showLevels = e.target.checked; renderChart(); });
   $('toggleLiquidity').addEventListener('change', (e) => { state.showLiquidity = e.target.checked; drawLiquidity(true); });
-  $('toggleLiquidations').addEventListener('change', (e) => { state.showLiquidations = e.target.checked; drawLiquidationLevels(true); rebuildLiqMarkers(); });
+  $('toggleLiquidations').addEventListener('change', (e) => { state.showLiquidations = e.target.checked; heatmapSig = ''; rebuildLiqMarkers(); });
   $('toggleAuto').addEventListener('change', (e) => {
     state.autoRefresh = e.target.checked;
     setupAutoRefresh();

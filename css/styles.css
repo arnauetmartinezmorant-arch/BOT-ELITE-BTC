@@ -169,7 +169,10 @@ body {
 
 /* ===================== CHART ===================== */
 .chart-panel { min-height: 480px; }
-.chart-container { width: 100%; height: 440px; border-radius: var(--radius-sm); overflow: hidden; position: relative; }
+.chart-container { width: 100%; height: 440px; border-radius: var(--radius-sm); overflow: hidden; position: relative; isolation: isolate; }
+
+/* liquidation heatmap canvas — sits BEHIND the candles (chart bg is transparent) */
+.liq-heatmap { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 
 /* TradingView-style position box overlay */
 .trade-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
@@ -494,6 +497,14 @@ body {
 .liqx-row.long .liqx-usd { color: var(--short); }
 .liqx-row.short .liqx-usd { color: var(--long); }
 .liqx-time { font-size: 10px; color: var(--text-3); text-align: right; }
+
+.liq-heat-legend { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 10.5px; color: var(--text-3); }
+.liq-heat-legend .heat-scale {
+  flex: 1; height: 8px; border-radius: 5px; max-width: 220px;
+  background: linear-gradient(90deg, rgb(38,22,74), rgb(40,78,160), rgb(26,150,158), rgb(92,200,110), rgb(250,228,40));
+}
+.heat-scale-lbls { display: flex; justify-content: space-between; gap: 10px; }
+.heat-scale-lbls b { font-weight: 600; }
 
 /* ===================== FOOTER ===================== */
 .footer { display: flex; justify-content: space-between; margin-top: 22px; padding: 16px 4px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }

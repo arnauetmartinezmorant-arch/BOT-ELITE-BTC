@@ -256,7 +256,12 @@
         <div id="liqList" class="liqx-list">
           <div class="empty-state">Conectando al stream de liquidaciones…</div>
         </div>
-        <p class="news-disclaimer">Liquidaciones reales de Binance Futures en tiempo real. Las líneas 🔥 del gráfico son <b>niveles de liquidación estimados por apalancamiento</b> (la heatmap real de Coinglass requiere su API de pago y no es accesible desde el navegador sin clave).</p>
+        <div class="liq-heat-legend">
+          <span>Mapa de calor de liquidación</span>
+          <i class="heat-scale"></i>
+          <span class="heat-scale-lbls"><b>menos</b><b>más</b></span>
+        </div>
+        <p class="news-disclaimer">Liquidaciones reales de Binance Futures en tiempo real. El <b>mapa de calor</b> del gráfico muestra los <b>niveles de liquidación acumulados por apalancamiento</b> (anclados al precio, estilo Coinglass). La heatmap real de Coinglass requiere su API de pago; esto es una estimación on-chart con el mismo concepto.</p>
       </section>
     </main>
 
