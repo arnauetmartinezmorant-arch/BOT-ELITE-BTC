@@ -203,13 +203,14 @@
       <!-- LIQUIDITY POOLS -->
       <section class="panel liquidity-panel">
         <div class="panel-head">
-          <h2>💧 Pools de liquidez <span id="liquidityCount" class="tag tag-muted">0</span></h2>
+          <h2>💧 Zonas de liquidez <span id="liquidityCount" class="tag tag-muted">0</span></h2>
           <span id="liqMeta" class="tag tag-muted">En tiempo real</span>
         </div>
+        <p class="panel-help">💡 <b>En cristiano:</b> son precios donde hay MUCHAS órdenes acumuladas, así que el precio tiende a ir a "tocarlos" como un <b>imán</b>. Las de <b class="c-up">arriba</b> tiran del precio si sube; las de <b class="c-down">abajo</b> si baja. <b>Sin tocar</b> = el imán sigue activo · <b>ya tocada</b> = liquidez gastada. El <span title="objetivo más cercano">🎯</span> marca la más cercana a cada lado.</p>
         <div class="liq-legend">
-          <span class="liq-key buy">BSL · liquidez de compra (arriba)</span>
-          <span class="liq-key sell">SSL · liquidez de venta (abajo)</span>
-          <span class="liq-key swept">◍ barrida</span>
+          <span class="liq-key buy">🟢 Arriba <small>(BSL · imán al subir)</small></span>
+          <span class="liq-key sell">🔴 Abajo <small>(SSL · imán al bajar)</small></span>
+          <span class="liq-key swept">◍ ya tocada</span>
         </div>
         <div id="liquidityList" class="liquidity-list"></div>
       </section>
@@ -248,6 +249,7 @@
             <span class="news-src-wrap">Binance Futures · BTCUSDT perp</span>
           </div>
         </div>
+        <p class="panel-help">💡 <b>En cristiano:</b> una "liquidación" es cuando a alguien apalancado le <b>cierran la posición a la fuerza</b> por ir en contra del precio. El <b>mapa de calor</b> del gráfico pinta dónde se acumularían más (🟣 poco → 🟡 mucho); pasa el cursor por encima para ver el <b>$ estimado</b>. La lista de abajo son las liquidaciones <b>reales</b> que ocurren ahora mismo en Binance.</p>
         <div class="liqx-totals">
           <div class="liqx-tot long"><span>Longs liquidados</span><b id="liqLongTotal">$0</b></div>
           <div class="liqx-tot short"><span>Shorts liquidados</span><b id="liqShortTotal">$0</b></div>
@@ -261,7 +263,7 @@
           <i class="heat-scale"></i>
           <span class="heat-scale-lbls"><b>menos</b><b>más</b></span>
         </div>
-        <p class="news-disclaimer">Liquidaciones reales de Binance Futures en tiempo real. El <b>mapa de calor</b> del gráfico muestra los <b>niveles de liquidación acumulados por apalancamiento</b> (anclados al precio, estilo Coinglass). La heatmap real de Coinglass requiere su API de pago; esto es una estimación on-chart con el mismo concepto.</p>
+        <p class="news-disclaimer">⚠️ <b>Importante:</b> NO estás conectado a Coinglass (su API es de pago). El <b>mapa de calor es una estimación propia</b> con el mismo concepto, no son sus datos reales. Lo único 100% real son las <b>liquidaciones de la lista</b> (de Binance, que además solo envía 1 por segundo, así que es un muestreo, no todas).</p>
       </section>
     </main>
 

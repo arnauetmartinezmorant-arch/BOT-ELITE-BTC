@@ -167,6 +167,16 @@ body {
 .tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: rgba(247,147,26,0.15); color: var(--accent); letter-spacing: 0.5px; }
 .tag-muted { background: rgba(148,163,184,0.12); color: var(--text-2); }
 
+/* plain-language help box shown inside panels */
+.panel-help {
+  font-size: 11.5px; line-height: 1.5; color: var(--text-2);
+  background: var(--bg-1); border: 1px solid var(--border); border-left: 3px solid var(--accent-2);
+  border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px;
+}
+.panel-help b { color: var(--text-1); font-weight: 700; }
+.c-up { color: var(--long) !important; }
+.c-down { color: var(--short) !important; }
+
 /* ===================== CHART ===================== */
 .chart-panel { min-height: 480px; }
 .chart-container { width: 100%; height: 440px; border-radius: var(--radius-sm); overflow: hidden; position: relative; isolation: isolate; }
@@ -393,10 +403,11 @@ body {
 .liq-key.buy::before { background: var(--long); }
 .liq-key.sell::before { background: var(--short); }
 .liq-key.swept::before { background: var(--text-3); opacity: 0.5; }
+.liq-key small { color: var(--text-3); font-weight: 500; }
 
 .liquidity-list { display: flex; flex-direction: column; gap: 7px; max-height: 360px; overflow-y: auto; }
 .liq-row {
-  display: grid; grid-template-columns: 58px 1fr auto auto; align-items: center; gap: 12px;
+  display: grid; grid-template-columns: 86px 1fr auto auto; align-items: center; gap: 12px;
   padding: 10px 13px; background: var(--bg-1); border: 1px solid var(--border);
   border-left-width: 3px; border-radius: var(--radius-sm); transition: 0.15s;
 }
@@ -406,7 +417,8 @@ body {
 .liq-row.target { box-shadow: inset 0 0 0 1px var(--border-strong); }
 .liq-row.target.buy { background: linear-gradient(90deg, var(--long-dim), var(--bg-1)); }
 .liq-row.target.sell { background: linear-gradient(90deg, var(--short-dim), var(--bg-1)); }
-.liq-side { font-family: var(--mono); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
+.liq-side { display: flex; flex-direction: column; gap: 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.2px; }
+.liq-side small { font-family: var(--mono); font-size: 9px; color: var(--text-3); font-weight: 700; letter-spacing: 0.3px; }
 .liq-row.buy .liq-side { color: var(--long); }
 .liq-row.sell .liq-side { color: var(--short); }
 .liq-price { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text-0); }

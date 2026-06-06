@@ -777,7 +777,7 @@ function renderLiquidity() {
   }
 
   $('liquidityCount').textContent = String(liq.untapped);
-  $('liqMeta').textContent = `${liq.untapped} sin barrer · ${liq.pools.length} totales`;
+  $('liqMeta').textContent = `${liq.untapped} sin tocar · ${liq.pools.length} en total`;
 
   const nearestBuyP = liq.nearestBuy ? liq.nearestBuy.price : null;
   const nearestSellP = liq.nearestSell ? liq.nearestSell.price : null;
@@ -785,16 +785,17 @@ function renderLiquidity() {
   // show up to 12 closest pools so the panel stays readable
   const rows = liq.pools.slice(0, 12).map((p) => {
     const isTarget = p.price === nearestBuyP || p.price === nearestSellP;
-    const sideTxt = p.side === 'buy' ? 'BSL' : 'SSL';
-    const sideSub = p.side === 'buy' ? 'arriba' : 'abajo';
+    const sideIcon = p.side === 'buy' ? '🟢' : '🔴';
+    const sideTxt = p.side === 'buy' ? 'Arriba' : 'Abajo';
+    const tech = p.side === 'buy' ? 'BSL' : 'SSL';
     const dist = (p.distPct >= 0 ? '+' : '') + p.distPct.toFixed(2) + '%';
     const distCls = p.distPct >= 0 ? 'up' : 'down';
-    const status = p.swept ? 'Barrida' : 'Sin barrer';
+    const status = p.swept ? 'Ya tocada' : 'Sin tocar';
     const statusCls = p.swept ? 'swept' : 'untapped';
-    const touches = p.equal ? `×${p.touches} igual` : `×${p.touches}`;
+    const touches = p.equal ? `tocado ${p.touches}×` : '1 toque';
     return `<div class="liq-row ${p.side} ${p.swept ? 'swept' : ''} ${isTarget ? 'target' : ''}">
-      <div class="liq-side">${sideTxt}${isTarget ? ' 🎯' : ''}</div>
-      <div class="liq-price">${fmtPrice(p.price)}<small>${sideSub} · ${touches}</small>
+      <div class="liq-side">${sideIcon} ${sideTxt}${isTarget ? ' 🎯' : ''}<small>${tech}</small></div>
+      <div class="liq-price">${fmtPrice(p.price)}<small>${touches}</small>
         <div class="liq-strength"><i style="width:${p.strength}%"></i></div>
       </div>
       <div class="liq-dist ${distCls}">${dist}</div>
