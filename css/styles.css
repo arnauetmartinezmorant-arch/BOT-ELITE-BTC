@@ -174,6 +174,20 @@ body {
 /* liquidation heatmap canvas — sits BEHIND the candles (chart bg is transparent) */
 .liq-heatmap { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 
+/* heatmap hover tooltip (price + estimated liquidation $) */
+.liq-tip {
+  position: absolute; z-index: 6; pointer-events: none; min-width: 190px;
+  background: rgba(8, 11, 20, 0.92); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px); font-family: var(--mono);
+}
+.liq-tip-date { font-size: 11px; color: var(--text-1); font-weight: 600; margin-bottom: 7px; }
+.liq-tip-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-2); padding: 2px 0; }
+.liq-tip-row b { margin-left: auto; color: var(--text-0); font-weight: 700; }
+.liq-tip-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.liq-tip-row .dot.price { background: #38bdf8; }
+.liq-tip-row .dot.liq { background: #5cc86e; }
+
 /* TradingView-style position box overlay */
 .trade-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
 .trade-box { position: absolute; border-radius: 3px 0 0 3px; }

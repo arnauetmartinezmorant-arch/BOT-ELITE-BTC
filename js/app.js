@@ -53,6 +53,7 @@ let heatmapCanvas = null;
 let heatmapCtx = null;
 let heatmapSig = '';
 let heatmapLastCandleTime = 0;
+let heatmapTip = null;
 let refreshTimer = null;
 let tickerTimer = null;
 
@@ -106,6 +107,62 @@ function buildHeatmapCanvas() {
   // sits BEHIND the candles (chart background is transparent)
   host.insertBefore(heatmapCanvas, host.firstChild);
   heatmapCtx = heatmapCanvas.getContext('2d');
+
+  // hover tooltip (price + estimated liquidation $ at the cursor level)
+  heatmapTip = document.createElement('div');
+  heatmapTip.className = 'liq-tip';
+  heatmapTip.style.display = 'none';
+  host.appendChild(heatmapTip);
+  chart.subscribeCrosshairMove(onCrosshairMove);
+}
+
+/** Nearest heatmap band (within one bin) to a given price. */
+function nearestHeatBin(price) {
+  const hm = state.heatmap;
+  if (!hm || !hm.bins.length) return null;
+  let best = null, bestD = hm.binSize;
+  for (const b of hm.bins) {
+    const d = Math.abs(b.price - price);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  return best;
+}
+
+function fmtTipDate(t) {
+  const secs = typeof t === 'number' ? t : null;
+  if (secs == null) return '';
+  const d = new Date(secs * 1000);
+  if (isNaN(d.getTime())) return '';
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** Show "Precio + Apalancamiento Liquidación ($)" when hovering the heatmap. */
+function onCrosshairMove(param) {
+  if (!heatmapTip) return;
+  const hm = state.heatmap;
+  if (!state.showLiquidations || !hm || !hm.bins.length || !param.point || param.point.x < 0 || param.point.y < 0) {
+    heatmapTip.style.display = 'none';
+    return;
+  }
+  const price = candleSeries.coordinateToPrice(param.point.y);
+  if (price == null) { heatmapTip.style.display = 'none'; return; }
+  const bin = nearestHeatBin(price);
+  const usd = bin ? bin.usd : 0;
+  heatmapTip.innerHTML = `<div class="liq-tip-date">${fmtTipDate(param.time)}</div>
+    <div class="liq-tip-row"><span class="dot price"></span>Precio<b>${fmtPrice(price)}</b></div>
+    <div class="liq-tip-row"><span class="dot liq"></span>Apal. Liquidación<b>${usd > 0 ? fmtUsdShort(usd) : '—'}</b></div>`;
+
+  const host = $('chart');
+  const W = host.clientWidth, H = host.clientHeight;
+  const tw = 210, th = 78;
+  let left = param.point.x + 16;
+  let top = param.point.y + 16;
+  if (left + tw > W) left = param.point.x - tw - 16;
+  if (top + th > H) top = param.point.y - th - 16;
+  heatmapTip.style.left = Math.max(4, left) + 'px';
+  heatmapTip.style.top = Math.max(4, top) + 'px';
+  heatmapTip.style.display = 'block';
 }
 
 /**

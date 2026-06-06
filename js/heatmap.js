@@ -50,8 +50,13 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
   if (binSize <= 0) return empty;
 
   const weights = new Float64Array(nBins);
+  const usds = new Float64Array(nBins);         // estimated liquidation notional (USD)
   const startTimes = new Float64Array(nBins);   // earliest candle that formed the level
   startTimes.fill(0);
+
+  // fraction of a candle's traded notional assumed to rest as leveraged
+  // liquidation liquidity at the projected level (tuning constant)
+  const PARTICIPATION = 0.12;
 
   const idxOf = (price) => Math.floor((price - priceMin) / binSize);
 
@@ -67,16 +72,19 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
     const recency = 0.3 + 0.7 * (i / (n - 1));            // recent candles weigh more
     const vol = (c.volume || (c.high - c.low)) / (avgVol || 1);
     const base = Math.max(0.05, vol) * recency;
+    const usdVol = (c.volume || (c.high - c.low)) * c.close;   // ≈ USD traded this candle
     const price = c.close;
     for (const { L, w } of TIERS) {
       const frac = 1 / L;
       const longLiq = price * (1 - frac);                 // longs liquidate below
       const shortLiq = price * (1 + frac);                // shorts liquidate above
       const contrib = base * w;
+      const usdContrib = usdVol * recency * w * PARTICIPATION;
       for (const lvl of [longLiq, shortLiq]) {
         const bi = idxOf(lvl);
         if (bi < 0 || bi >= nBins) continue;
         weights[bi] += contrib;
+        usds[bi] += usdContrib;
         if (startTimes[bi] === 0) startTimes[bi] = c.time;   // first time it formed
       }
     }
@@ -99,6 +107,7 @@ export function computeLiquidationHeatmap(candles, opts = {}) {
     bins.push({
       price: priceMin + (i + 0.5) * binSize,
       weight: smooth[i],
+      usd: usds[i],
       startTime: startTimes[i] || candles[0].time,
     });
   }
