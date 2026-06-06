@@ -92,6 +92,7 @@
           <label class="switch"><input type="checkbox" id="toggleEMA" checked /><span class="slider"></span><span class="switch-text">EMAs</span></label>
           <label class="switch"><input type="checkbox" id="toggleLevels" checked /><span class="slider"></span><span class="switch-text">Niveles</span></label>
           <label class="switch"><input type="checkbox" id="toggleLiquidity" checked /><span class="slider"></span><span class="switch-text">💧 Liquidez</span></label>
+          <label class="switch"><input type="checkbox" id="toggleLiquidations" checked /><span class="slider"></span><span class="switch-text">🔥 Liquidaciones</span></label>
           <label class="switch"><input type="checkbox" id="toggleAuto" checked /><span class="slider"></span><span class="switch-text">Auto-refresco</span></label>
           <label class="switch"><input type="checkbox" id="toggleAlerts" checked /><span class="slider"></span><span class="switch-text">🔔 Alertas</span></label>
         </div>
@@ -236,6 +237,26 @@
           <div class="empty-state">Cargando noticias del mercado…</div>
         </div>
         <p class="news-disclaimer">Las noticias son contextuales y NO modifican el motor de señales del bot. Sigue siendo tu criterio el que decide.</p>
+      </section>
+
+      <!-- LIQUIDATIONS -->
+      <section class="panel liquidations-panel">
+        <div class="panel-head">
+          <h2>🔥 Liquidaciones <span id="liqStatTag" class="tag tag-muted">conectando…</span></h2>
+          <div class="news-meta">
+            <span id="liqLiveDot" class="status-dot"></span>
+            <span class="news-src-wrap">Binance Futures · BTCUSDT perp</span>
+          </div>
+        </div>
+        <div class="liqx-totals">
+          <div class="liqx-tot long"><span>Longs liquidados</span><b id="liqLongTotal">$0</b></div>
+          <div class="liqx-tot short"><span>Shorts liquidados</span><b id="liqShortTotal">$0</b></div>
+        </div>
+        <div class="liqx-dom"><i id="liqDomLong" class="long"></i><i id="liqDomShort" class="short"></i></div>
+        <div id="liqList" class="liqx-list">
+          <div class="empty-state">Conectando al stream de liquidaciones…</div>
+        </div>
+        <p class="news-disclaimer">Liquidaciones reales de Binance Futures en tiempo real. Las líneas 🔥 del gráfico son <b>niveles de liquidación estimados por apalancamiento</b> (la heatmap real de Coinglass requiere su API de pago y no es accesible desde el navegador sin clave).</p>
       </section>
     </main>
 

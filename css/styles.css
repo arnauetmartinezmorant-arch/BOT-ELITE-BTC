@@ -139,7 +139,8 @@ body {
     "indicators signal"
     "mtf patterns"
     "journal journal"
-    "liquidity news";
+    "liquidity news"
+    "liquidations liquidations";
   gap: 16px;
   margin-top: 16px;
 }
@@ -151,6 +152,7 @@ body {
 .journal-panel { grid-area: journal; }
 .liquidity-panel { grid-area: liquidity; }
 .news-panel { grid-area: news; display: flex; flex-direction: column; }
+.liquidations-panel { grid-area: liquidations; }
 
 .panel {
   background: var(--panel);
@@ -460,6 +462,39 @@ body {
 .news-sentiment-tag.bear { background: var(--short-dim); color: var(--short); }
 .news-sentiment-tag.neutral { background: rgba(148,163,184,0.12); color: var(--text-2); }
 
+/* ===================== LIQUIDATIONS ===================== */
+.liqx-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.liqx-tot { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; border-left-width: 3px; }
+.liqx-tot.long { border-left-color: var(--short); }
+.liqx-tot.short { border-left-color: var(--long); }
+.liqx-tot span { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; }
+.liqx-tot b { font-family: var(--mono); font-size: 18px; font-weight: 700; }
+.liqx-tot.long b { color: var(--short); }
+.liqx-tot.short b { color: var(--long); }
+
+.liqx-dom { display: flex; height: 7px; border-radius: 6px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--border); background: var(--bg-1); }
+.liqx-dom i { display: block; height: 100%; transition: width 0.5s ease; }
+.liqx-dom i.long { background: var(--short); }
+.liqx-dom i.short { background: var(--long); }
+
+.liqx-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.liqx-row {
+  display: grid; grid-template-columns: 96px 1fr auto auto; align-items: center; gap: 10px;
+  padding: 9px 12px; background: var(--bg-1); border: 1px solid var(--border);
+  border-left-width: 3px; border-radius: var(--radius-sm); font-family: var(--mono);
+}
+.liqx-row.long { border-left-color: var(--short); }
+.liqx-row.short { border-left-color: var(--long); }
+.liqx-row.big { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.liqx-badge { font-size: 9px; font-weight: 800; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; font-family: 'Inter', sans-serif; }
+.liqx-badge.long { background: var(--short-dim); color: var(--short); }
+.liqx-badge.short { background: var(--long-dim); color: var(--long); }
+.liqx-px { font-size: 13px; font-weight: 700; color: var(--text-0); }
+.liqx-usd { font-size: 13px; font-weight: 700; color: var(--text-1); text-align: right; }
+.liqx-row.long .liqx-usd { color: var(--short); }
+.liqx-row.short .liqx-usd { color: var(--long); }
+.liqx-time { font-size: 10px; color: var(--text-3); text-align: right; }
+
 /* ===================== FOOTER ===================== */
 .footer { display: flex; justify-content: space-between; margin-top: 22px; padding: 16px 4px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
 
@@ -473,7 +508,7 @@ body {
 @media (max-width: 1200px) {
   .main-grid {
     grid-template-columns: 1fr;
-    grid-template-areas: "chart" "signal" "indicators" "mtf" "patterns" "journal" "liquidity" "news";
+    grid-template-areas: "chart" "signal" "indicators" "mtf" "patterns" "journal" "liquidity" "news" "liquidations";
   }
   .signal-panel { order: -1; }
 }

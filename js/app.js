@@ -9,6 +9,7 @@ import { setAlertsEnabled, primeAudio, playAlertSound, requestNotifyPermission, 
 import { getTrades, addTrade, resolveTrade, deleteTrade, clearAll, getStats, liveR } from './journal.js';
 import { detectLiquidity } from './liquidity.js';
 import { fetchNews, aggregateSentiment } from './news.js';
+import { createLiquidationFeed, estimateLiquidationLevels } from './liquidations.js';
 
 const LWC = window.LightweightCharts;
 
@@ -24,6 +25,7 @@ const state = {
   showEMA: true,
   showLevels: true,
   showLiquidity: true,
+  showLiquidations: true,
   loading: false,
   lastAlertKey: null,
   lastLoggedKey: null,
@@ -35,6 +37,8 @@ const state = {
   newsUpdatedAt: 0,
   newsFilter: 'all',
   newsAlerts: (() => { try { return localStorage.getItem('btc_news_alerts') !== '0'; } catch (e) { return true; } })(),
+  liquidations: { events: [], totalLong: 0, totalShort: 0, alive: false },
+  liqLevels: [],
 };
 
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -43,6 +47,9 @@ let chart, candleSeries, ema21Series, ema50Series, ema200Series;
 let priceLines = [];
 let liqLines = [];
 let liqSig = '';
+let liqLevelLines = [];
+let liqLevelSig = '';
+let liqFeed = null;
 let refreshTimer = null;
 let tickerTimer = null;
 
@@ -176,6 +183,10 @@ function renderChart() {
   // don't fight with the S/R lines above)
   drawLiquidity(true);
 
+  // Coinglass-style liquidation levels + real-time liquidation markers
+  drawLiquidationLevels(true);
+  rebuildLiqMarkers();
+
   if (!state._fitted) {
     // Show the most recent ~140 candles (not all 400) for a clean, readable view.
     const n = c.length;
@@ -232,6 +243,84 @@ function drawLiquidity(force = false) {
       title: l.label,
     }));
   }
+}
+
+/* ---------------------- liquidation levels + markers on chart ---------------------- */
+function clearLiqLevelLines() {
+  liqLevelLines.forEach((pl) => { try { candleSeries.removePriceLine(pl); } catch (e) {} });
+  liqLevelLines = [];
+}
+
+/** Draw estimated leverage liquidation levels (long below / short above). */
+function drawLiquidationLevels(force = false) {
+  if (!candleSeries) return;
+  const levels = state.showLiquidations ? (state.liqLevels || []) : [];
+  const sig = levels.map((l) => `${l.side}${l.leverage}:${l.price}`).join('|') + ':' + state.showLiquidations;
+  if (!force && sig === liqLevelSig) return;
+  liqLevelSig = sig;
+  clearLiqLevelLines();
+  for (const l of levels) {
+    const isLong = l.side === 'long';
+    const alpha = 0.18 + l.intensity * 0.32;        // 100x most visible
+    liqLevelLines.push(candleSeries.createPriceLine({
+      price: l.price,
+      color: isLong ? `rgba(234,57,67,${alpha})` : `rgba(22,199,132,${alpha})`,
+      lineWidth: 1,
+      lineStyle: LWC.LineStyle.SparseDotted,
+      axisLabelVisible: true,
+      title: `🔥${l.leverage}x`,
+    }));
+  }
+}
+
+/** Snap a liquidation timestamp (ms) to a candle time on the current chart. */
+function snapToCandleTime(tsMs) {
+  const arr = state.candles;
+  if (!arr.length) return null;
+  const tsec = Math.floor(tsMs / 1000);
+  const last = arr[arr.length - 1];
+  if (tsec >= last.time) return last.time;          // live → forming candle
+  const tf = TF_SECONDS[state.tf] || 14400;
+  let bucket = Math.floor(tsec / tf) * tf;
+  if (bucket < arr[0].time) bucket = arr[0].time;
+  return bucket;
+}
+
+/** Rebuild the liquidation markers on the candle series from the live feed. */
+function rebuildLiqMarkers() {
+  if (!candleSeries) return;
+  if (!state.showLiquidations) { try { candleSeries.setMarkers([]); } catch (e) {} return; }
+  const evs = (state.liquidations && state.liquidations.events) || [];
+  // aggregate USD by candle time + side so cascades don't spam the chart
+  const agg = new Map();
+  for (const e of evs) {
+    const t = snapToCandleTime(e.time);
+    if (t == null) continue;
+    const key = t + '|' + e.side;
+    agg.set(key, (agg.get(key) || 0) + e.usd);
+  }
+  const markers = [];
+  for (const [key, usd] of agg) {
+    const [tStr, side] = key.split('|');
+    const isLong = side === 'long';
+    markers.push({
+      time: +tStr,
+      position: isLong ? 'belowBar' : 'aboveBar',
+      color: isLong ? '#ea3943' : '#16c784',
+      shape: isLong ? 'arrowDown' : 'arrowUp',
+      size: usd >= 1e6 ? 2 : 1,
+      text: usd >= 250000 ? fmtUsdShort(usd) : '',
+    });
+  }
+  markers.sort((a, b) => a.time - b.time);
+  try { candleSeries.setMarkers(markers); } catch (e) {}
+}
+
+function fmtUsdShort(n) {
+  if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+  return '$' + Math.round(n);
 }
 
 /* ---------------------- themes ---------------------- */
@@ -614,6 +703,50 @@ function renderLiquidity() {
   host.innerHTML = rows;
 }
 
+/* ---------------------- liquidations panel ---------------------- */
+function renderLiquidations() {
+  const host = $('liqList');
+  if (!host) return;
+  const lq = state.liquidations || { events: [], totalLong: 0, totalShort: 0, alive: false };
+
+  // status dot + tag
+  const dot = $('liqLiveDot');
+  if (dot) dot.className = 'status-dot' + (lq.alive ? ' live' : (lq.events.length ? '' : ' error'));
+  const tag = $('liqStatTag');
+  if (tag) {
+    tag.textContent = lq.alive ? 'en vivo' : (lq.events.length ? 'reconectando' : 'conectando…');
+    tag.className = 'tag ' + (lq.alive ? '' : 'tag-muted');
+  }
+
+  // totals + dominance bar (since session start)
+  const tot = lq.totalLong + lq.totalShort;
+  $('liqLongTotal').textContent = fmtUsdShort(lq.totalLong || 0);
+  $('liqShortTotal').textContent = fmtUsdShort(lq.totalShort || 0);
+  const longShare = tot > 0 ? (lq.totalLong / tot) * 100 : 50;
+  const domL = $('liqDomLong'); const domS = $('liqDomShort');
+  if (domL) domL.style.width = longShare.toFixed(1) + '%';
+  if (domS) domS.style.width = (100 - longShare).toFixed(1) + '%';
+
+  if (!lq.events.length) {
+    host.innerHTML = `<div class="empty-state">${lq.alive
+      ? 'Conectado. Esperando liquidaciones de BTC perp…'
+      : 'Conectando al stream de liquidaciones de Binance Futures… (si tu red bloquea Binance, no aparecerán).'}</div>`;
+    return;
+  }
+
+  host.innerHTML = lq.events.slice(0, 30).map((e) => {
+    const isLong = e.side === 'long';
+    const t = new Date(e.time).toLocaleTimeString('es-ES');
+    const big = e.usd >= 1e6 ? ' big' : '';
+    return `<div class="liqx-row ${e.side}${big}">
+      <span class="liqx-badge ${e.side}">${isLong ? 'LONG REKT' : 'SHORT REKT'}</span>
+      <span class="liqx-px">${fmtPrice(e.price)}</span>
+      <span class="liqx-usd">${fmtUsdShort(e.usd)}</span>
+      <span class="liqx-time">${t}</span>
+    </div>`;
+  }).join('');
+}
+
 /* ---------------------- market news panel ---------------------- */
 function relTime(ms) {
   const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
@@ -743,12 +876,14 @@ async function analyze(opts = {}) {
 
     state.signal = generateSignal(candles, state.ind, state.risk, mtfBias);
     state.liquidity = detectLiquidity(candles);
+    state.liqLevels = estimateLiquidationLevels(candles[candles.length - 1].close);
 
     renderChart();
     renderSignal();
     renderIndicators();
     renderPatterns();
     renderLiquidity();
+    renderLiquidations();
     renderJournal();
 
     // fire alert when a NEW actionable signal appears
@@ -885,8 +1020,10 @@ function startRecomputeLoop() {
     state.ind = computeIndicators(state.candles);
     state.signal = generateSignal(state.candles, state.ind, state.risk, state.mtfBias);
     state.liquidity = detectLiquidity(state.candles);
+    state.liqLevels = estimateLiquidationLevels(state.livePrice || state.candles[state.candles.length - 1].close);
     renderChartLive();
     drawLiquidity();              // refresh chart lines only if pools changed
+    drawLiquidationLevels();      // refresh liquidation levels if price moved
     renderSignal();
     renderIndicators();
     renderPatterns();
@@ -1106,6 +1243,19 @@ function startNewsLoop() {
   newsClockTimer = setInterval(tickNewsClock, 1000);   // live relative times
 }
 
+/* ---------------------- liquidations feed ---------------------- */
+function onLiquidationsUpdate(s) {
+  state.liquidations = s;
+  renderLiquidations();
+  if (state.showLiquidations) rebuildLiqMarkers();   // ≤1 event/sec from Binance, cheap
+}
+
+function startLiquidationsFeed() {
+  if (liqFeed) return;
+  liqFeed = createLiquidationFeed({ onUpdate: onLiquidationsUpdate, max: 60 });
+  liqFeed.start();
+}
+
 /* ---------------------- controls ---------------------- */
 function bindControls() {
   $('tfSelector').addEventListener('click', (e) => {
@@ -1137,6 +1287,7 @@ function bindControls() {
   $('toggleEMA').addEventListener('change', (e) => { state.showEMA = e.target.checked; renderChart(); });
   $('toggleLevels').addEventListener('change', (e) => { state.showLevels = e.target.checked; renderChart(); });
   $('toggleLiquidity').addEventListener('change', (e) => { state.showLiquidity = e.target.checked; drawLiquidity(true); });
+  $('toggleLiquidations').addEventListener('change', (e) => { state.showLiquidations = e.target.checked; drawLiquidationLevels(true); rebuildLiqMarkers(); });
   $('toggleAuto').addEventListener('change', (e) => {
     state.autoRefresh = e.target.checked;
     setupAutoRefresh();
@@ -1264,6 +1415,7 @@ function boot() {
   pollTicker();
   setInterval(pollTicker, 15000);
   startNewsLoop();
+  startLiquidationsFeed();
 
   // catch up instantly when the user comes back to the tab
   document.addEventListener('visibilitychange', () => {

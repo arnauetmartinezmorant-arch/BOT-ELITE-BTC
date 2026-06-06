@@ -45,6 +45,14 @@ alertas sonoras + notificaciones y diario de trades.
   y reloj relativo ("hace Xs"). Avisa con **sonido + notificación** cuando entra una
   noticia de **alto impacto** (campana 🔔 del panel para silenciarlas). Es
   **informativo**: NO modifica el motor de señales.
+- **🔥 Liquidaciones**: liquidaciones **reales en tiempo real** de Binance Futures
+  (BTCUSDT perp, vía WebSocket `@forceOrder`, sin API key) dibujadas como **marcadores
+  en el gráfico** (▼ rojo = longs liquidados, ▲ verde = shorts liquidados) más un panel
+  con feed en vivo y totales long/short. Además dibuja **niveles de liquidación
+  estimados por apalancamiento** (100x/50x/25x, estilo "liq map" de Coinglass) como
+  líneas 🔥 sobre las velas (toggle "🔥 Liquidaciones"). Nota: la heatmap real de
+  Coinglass requiere su API de pago y no es accesible desde el navegador sin clave, por
+  eso las liquidaciones reales vienen de Binance y los niveles son una estimación.
 
 ## 🗂️ Datos de mercado
 
@@ -96,6 +104,7 @@ js/
   patterns.js         Tendencia, S/R, banderas, triángulos, velas, manipulación
   signals.js          Motor de confluencia + planes de trade 2:1
   liquidity.js        Pools de liquidez (BSL/SSL) reutilizando los swings del motor
+  liquidations.js     Liquidaciones reales (Binance Futures) + niveles por apalancamiento
   news.js             Capa de noticias en vivo + clasificación de sentimiento/impacto
   alerts.js           Sonido (Web Audio) + notificaciones
   journal.js          Diario de trades (localStorage) + estadísticas en R
