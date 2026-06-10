@@ -81,3 +81,32 @@ export function formatReversal(mode, tf, trade, newDir) {
     'Cierre sugerido de la posición abierta.',
   ].join('\n');
 }
+
+
+/**
+ * Heartbeat / "estoy vivo" message so you know the bot is running even when
+ * there are no new signals. `info` = { time, timeframes, modes, openTrades,
+ * source }.  openTrades: [{ tf, mode, dir, entry }]
+ */
+export function formatHeartbeat(info) {
+  const time = new Date(info.time).toLocaleString('es-ES', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+  const lines = [
+    '💓 <b>Bot activo</b> · BTC Quant',
+    `🕒 ${time}`,
+    `📡 Vigilando: <b>${info.timeframes.join(', ').toUpperCase()}</b>`,
+    `🎛️ Modos: <b>${info.modes.join(', ') || '—'}</b>`,
+    `🌐 Datos: <b>${info.source || '—'}</b>`,
+  ];
+  if (info.openTrades && info.openTrades.length) {
+    lines.push('', `📈 <b>Operaciones en seguimiento (${info.openTrades.length}):</b>`);
+    for (const t of info.openTrades) {
+      const d = t.dir === 'long' ? '🟢 LONG' : '🔴 SHORT';
+      lines.push(`• ${t.tf.toUpperCase()} · ${t.mode} · ${d} · entrada <code>${fmt(t.entry)}</code>`);
+    }
+  } else {
+    lines.push('', '😴 Sin operaciones abiertas ahora mismo · esperando una buena señal.');
+  }
+  return lines.join('\n');
+}

@@ -1,11 +1,20 @@
 name: BTC Quant · Bot de Telegram (gratis)
 
 # Se ejecuta cada 5 minutos (mínimo permitido por GitHub Actions),
-# y también puedes lanzarlo a mano.
+# y también puedes lanzarlo a mano desde la pestaña "Actions".
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Modo prueba: analiza e imprime en el log SIN enviar a Telegram'
+        type: boolean
+        default: false
+      heartbeat:
+        description: 'Forzar mensaje "estoy vivo" en esta ejecución'
+        type: boolean
+        default: false
 
 # Evita que se solapen dos ejecuciones
 concurrency:
@@ -25,8 +34,8 @@ jobs:
         with:
           node-version: '20'
 
-      # Guarda/restaura el estado (qué señal se mandó por última vez)
-      # para no repetir alertas entre ejecuciones.
+      # Guarda/restaura el estado (qué señal se mandó por última vez y qué
+      # operaciones sigue abiertas) para no repetir alertas entre ejecuciones.
       - name: Restaurar estado anterior
         uses: actions/cache@v4
         with:
@@ -42,4 +51,8 @@ jobs:
           TELEGRAM_CHAT_CONSERVADOR: ${{ secrets.TELEGRAM_CHAT_CONSERVADOR }}
           TELEGRAM_CHAT_PREMIUM: ${{ secrets.TELEGRAM_CHAT_PREMIUM }}
           TIMEFRAMES: '5m,15m,1h,4h'
+          # Modo prueba (B): si lo activas al lanzar a mano, no envía a Telegram.
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+          # Heartbeat (A): -1 = forzar este run; vacío = comportamiento normal (cada 24h).
+          HEARTBEAT_HOURS: ${{ github.event.inputs.heartbeat == 'true' && '-1' || '' }}
         run: node server/index.js

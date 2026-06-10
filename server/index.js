@@ -22,7 +22,7 @@ import { computeIndicators } from '../js/indicators.js';
 import { generateSignal, timeframeBias } from '../js/signals.js';
 import { CONFIG } from './config.js';
 import { sendTelegram } from './telegram.js';
-import { formatSignal, formatExit, formatReversal } from './format.js';
+import { formatSignal, formatExit, formatReversal, formatHeartbeat } from './format.js';
 
 const MODES = ['conservador', 'premium'];
 const MTF_LIST = ['15m', '1h', '4h', '1d', '1w'];
@@ -41,6 +41,7 @@ function loadState() {
   // Migrate the old flat format ({ "mode:tf": "long" }) to the new shape.
   const out = {};
   for (const [k, v] of Object.entries(raw)) {
+    if (k === '__meta') { out.__meta = v || {}; continue; }   // keep metadata as-is
     out[k] = typeof v === 'string'
       ? { dir: v, trade: null }
       : { dir: v.dir || 'none', trade: v.trade || null };
@@ -50,12 +51,54 @@ function loadState() {
 function saveState() {
   try { writeFileSync(STATE_FILE, JSON.stringify(STATE)); } catch (e) { /* ignore */ }
 }
-function entryFor(key) {
-  if (!STATE[key]) STATE[key] = { dir: 'none', trade: null };
-  return STATE[key];
-}
 
 function activeModes() { return MODES.filter((m) => CONFIG.channels[m]); }
+
+// Last data source seen (Binance/OKX/…); shown in the heartbeat.
+let LAST_SOURCE = '—';
+
+/** Collect the trades the bot is currently tracking, for the heartbeat. */
+function openTradesSummary() {
+  const out = [];
+  for (const [key, st] of Object.entries(STATE)) {
+    if (st && st.trade) {
+      const [mode, tf] = key.split(':');
+      out.push({ mode, tf, dir: st.trade.dir, entry: st.trade.entry });
+    }
+  }
+  return out;
+}
+
+/**
+ * Send a periodic "I'm alive" message so you know the bot is running even
+ * when there are no new signals. Throttled by HEARTBEAT_HOURS and persisted
+ * in STATE so cron runs don't spam it. Sent to every active channel.
+ */
+async function maybeHeartbeat() {
+  const h = CONFIG.heartbeatHours;
+  if (!h && h !== -1) return;                 // 0 → disabled
+  const meta = STATE.__meta || (STATE.__meta = {});
+  const now = Date.now();
+  const due = h === -1 || !meta.lastHeartbeat || (now - meta.lastHeartbeat) >= h * 3600000;
+  if (!due) return;
+
+  const modes = activeModes();
+  const msg = formatHeartbeat({
+    time: now,
+    timeframes: CONFIG.timeframes,
+    modes,
+    source: LAST_SOURCE,
+    openTrades: openTradesSummary(),
+  });
+  // Prefer the conservador channel; fall back to whatever is configured.
+  const targets = modes.length ? [CONFIG.channels[modes[0]]] : [];
+  for (const chat of targets) {
+    const ok = await sendTelegram(chat, msg);
+    console.log(`[${new Date().toISOString()}] 💓 heartbeat ${ok ? '· enviado' : '· NO enviado'}`);
+  }
+  meta.lastHeartbeat = now;
+}
+
 
 /** Drop the still-forming last candle so signals are based on CLOSED data. */
 function closedOnly(candles) { return candles.length > 1 ? candles.slice(0, -1) : candles; }
@@ -113,12 +156,72 @@ export function evaluateTrade(trade, closed) {
   return { events, closed: isClosed, tp1Hit, stop, checkedTime: seen };
 }
 
+/**
+ * PURE state machine for one mode+tf in a single cycle. Given the previous
+ * persisted state, the fresh signal and the closed candles, it decides which
+ * alerts to emit and the next state — with NO I/O. This is what makes the
+ * de-duplication logic unit-testable.
+ *
+ * Returns { st, actions } where actions is an ordered list of:
+ *   { kind:'exit', ev, trade }        → a TP1/TP2/SL/BE lifecycle event
+ *   { kind:'reversal', newDir, trade} → open trade invalidated by a flip
+ *   { kind:'entry', trade }           → a fresh signal to alert + open
+ */
+export function stepTradeState(prev, sig, closed, lastClosedTime) {
+  const st = { dir: (prev && prev.dir) || 'none', trade: (prev && prev.trade) || null };
+  const dir = sig.direction; // 'long' | 'short' | 'none'
+  const actions = [];
+  let justClosed = false;
+
+  // 1) Track the lifecycle of a trade we already alerted (TP1/TP2/SL/BE).
+  if (st.trade) {
+    const res = evaluateTrade(st.trade, closed);
+    st.trade = { ...st.trade, tp1Hit: res.tp1Hit, stop: res.stop, checkedTime: res.checkedTime };
+    const tradeAtEvent = st.trade;
+    for (const ev of res.events) actions.push({ kind: 'exit', ev, trade: tradeAtEvent });
+    if (res.closed) {
+      // Reset the direction so a FRESH signal in the SAME direction alerts
+      // again on a later cycle (instead of being silently de-duplicated).
+      // `justClosed` prevents re-entering on the very same candle (whipsaw).
+      st.trade = null;
+      st.dir = 'none';
+      justClosed = true;
+    }
+  }
+
+  // 2) Direction change → close-on-reversal and/or open a new trade.
+  if (!justClosed && dir !== st.dir) {
+    if (st.trade && dir !== st.trade.dir) {
+      actions.push({ kind: 'reversal', newDir: dir, trade: st.trade });
+      st.trade = null;
+    }
+    st.dir = dir;
+    if (dir !== 'none' && sig.plan) {
+      const trade = {
+        dir,
+        entry: sig.plan.entry,
+        stop: sig.plan.stop,
+        tp1: sig.plan.tp1,
+        tp2: sig.plan.tp2,
+        openTime: lastClosedTime,
+        checkedTime: lastClosedTime,
+        tp1Hit: false,
+      };
+      st.trade = trade;
+      actions.push({ kind: 'entry', trade });
+    }
+  }
+
+  return { st, actions };
+}
+
 async function checkTimeframe(tf) {
   const { candles, source } = await fetchCandles(tf, 400);
   if (source === 'Simulado' && !CONFIG.dryRun) {
     console.warn(`[${tf}] sin datos reales de mercado; se omite este ciclo`);
     return;
   }
+  LAST_SOURCE = source;
   const closed = closedOnly(candles);
   const ind = computeIndicators(closed);
   const mtf = await mtfBiasFor(tf);
@@ -128,47 +231,22 @@ async function checkTimeframe(tf) {
     let sig;
     try { sig = generateSignal(closed, ind, mode, mtf); } catch (e) { continue; }
     const key = `${mode}:${tf}`;
-    const st = entryFor(key);
-    const dir = sig.direction; // 'long' | 'short' | 'none'
     const chat = CONFIG.channels[mode];
     const stamp = () => new Date().toISOString();
 
-    // 1) Track the lifecycle of a trade we already alerted (TP1/TP2/SL/BE).
-    if (st.trade) {
-      const res = evaluateTrade(st.trade, closed);
-      st.trade.tp1Hit = res.tp1Hit;
-      st.trade.stop = res.stop;
-      st.trade.checkedTime = res.checkedTime;
-      for (const ev of res.events) {
-        const ok = await sendTelegram(chat, formatExit(mode, tf, st.trade, ev));
-        console.log(`[${stamp()}] ${mode}/${tf} → ${ev.type.toUpperCase()} @ ${ev.price} ${ok ? '· enviado' : '· NO enviado'}`);
-      }
-      if (res.closed) st.trade = null;
-    }
+    const { st, actions } = stepTradeState(STATE[key], sig, closed, lastClosedTime);
+    STATE[key] = st;
 
-    // 2) Direction change → close-on-reversal and/or open a new trade.
-    if (dir !== st.dir) {
-      // The live signal flipped against an open trade → warn it's invalidated.
-      if (st.trade && dir !== st.trade.dir) {
-        const ok = await sendTelegram(chat, formatReversal(mode, tf, st.trade, dir));
+    for (const a of actions) {
+      if (a.kind === 'exit') {
+        const ok = await sendTelegram(chat, formatExit(mode, tf, a.trade, a.ev));
+        console.log(`[${stamp()}] ${mode}/${tf} → ${a.ev.type.toUpperCase()} @ ${a.ev.price} ${ok ? '· enviado' : '· NO enviado'}`);
+      } else if (a.kind === 'reversal') {
+        const ok = await sendTelegram(chat, formatReversal(mode, tf, a.trade, a.newDir));
         console.log(`[${stamp()}] ${mode}/${tf} → CIERRE POR CAMBIO DE SEÑAL ${ok ? '· enviado' : '· NO enviado'}`);
-        st.trade = null;
-      }
-      st.dir = dir;
-
-      if (dir !== 'none' && sig.plan) {
+      } else if (a.kind === 'entry') {
         const ok = await sendTelegram(chat, formatSignal(mode, tf, sig));
-        st.trade = {
-          dir,
-          entry: sig.plan.entry,
-          stop: sig.plan.stop,
-          tp1: sig.plan.tp1,
-          tp2: sig.plan.tp2,
-          openTime: lastClosedTime,
-          checkedTime: lastClosedTime,
-          tp1Hit: false,
-        };
-        console.log(`[${stamp()}] ${mode}/${tf} → ${dir.toUpperCase()} ` +
+        console.log(`[${stamp()}] ${mode}/${tf} → ${sig.direction.toUpperCase()} ` +
           `conv ${sig.conviction}% ${ok ? '· enviado' : '· NO enviado'}`);
       }
     }
@@ -179,6 +257,7 @@ async function loop() {
   for (const tf of CONFIG.timeframes) {
     try { await checkTimeframe(tf); } catch (e) { console.error(`[loop] ${tf}:`, e.message); }
   }
+  try { await maybeHeartbeat(); } catch (e) { console.error('[heartbeat]', e.message); }
   saveState();
 }
 
